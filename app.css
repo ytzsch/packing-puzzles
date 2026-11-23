@@ -1,0 +1,72 @@
+/* VOICE: a maker's bench tool: practical, exact, a little warm.
+   IDEA: a plywood puzzle tray sitting on a workshop bench, laser-red cut lines.
+   PICTURE: the tray itself, with wooden pieces you drag in. It's the working thing.
+   COLOUR and TYPE: wood tones on a neutral bench, one sharp laser red; Barlow Semi Condensed + Barlow.
+   LAYOUT: board left and large, a single control column right; stacks below 860px. */
+:root{color-scheme:light dark;
+  --bg:light-dark(#ecebe7,#141516);--panel:light-dark(#ffffff,#1e2022);--ink:light-dark(#1b1c1e,#ecebe7);
+  --muted:light-dark(#5f6166,#a3a6ab);--line:light-dark(#d4d2cc,#33363a);--laser:light-dark(#d4231b,#ff5a4f);
+  --tray:light-dark(#4a3526,#2c2018);--trayCell:light-dark(#5b4231,#3a2b20);--slot:light-dark(#dedbd4,#26282b);--focus:light-dark(#1d4ed8,#8fb0ff)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Barlow,system-ui,sans-serif;overflow-x:clip}
+.top{padding:20px max(4vw,16px) 8px;display:flex;flex-wrap:wrap;gap:12px 24px;align-items:end;justify-content:space-between;max-width:1280px;margin:0 auto}
+h1{font:700 clamp(28px,4.4vw,40px)/1.05 "Barlow Semi Condensed",sans-serif;margin:0;letter-spacing:-.01em}
+.lede{margin:4px 0 0;color:var(--muted);max-width:60ch}
+.tabs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:3px}
+.tabs button{border:0;background:none;font:600 16px Barlow,sans-serif;color:var(--ink);padding:9px 18px;border-radius:8px;cursor:pointer;min-height:44px}
+.tabs button[aria-selected=true]{background:var(--ink);color:var(--bg)}
+main{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;padding:12px max(4vw,16px) 40px;max-width:1280px;margin:0 auto;align-items:start}
+@media(min-width:861px){main>.board{position:sticky;top:12px}}
+@media(max-width:860px){main{grid-template-columns:minmax(0,1fr)}}
+.board{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;position:relative}
+.board svg{display:block;width:100%;height:auto;max-height:78vh;touch-action:none;user-select:none}
+.banner{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);background:var(--laser);color:#fff;font:700 18px "Barlow Semi Condensed",sans-serif;padding:8px 18px;border-radius:999px;box-shadow:0 6px 20px rgba(0,0,0,.25);white-space:nowrap}
+aside{display:grid;gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:12px}
+.card h2{font:700 20px/1.2 "Barlow Semi Condensed",sans-serif;margin:0}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:grid;gap:4px;font-size:14px;font-weight:600;color:var(--muted)}
+.check{display:flex;gap:10px;align-items:center;font-weight:500;color:var(--ink);font-size:15px;min-height:32px}
+.check input{width:20px;height:20px;accent-color:var(--laser)}
+input[type=number],select{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-height:42px}
+button{font:inherit}
+.btn{font-weight:600;border-radius:9px;padding:10px 14px;min-height:44px;cursor:pointer;border:1px solid var(--ink);background:var(--ink);color:var(--bg)}
+.btn.alt{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.red{background:var(--laser);border-color:var(--laser);color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.btns .btn{flex:1 1 auto}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.stat{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:15px}
+.stat b{font-variant-numeric:tabular-nums}
+.note{font-size:14px;color:var(--muted);margin:0}
+.msg{font-size:15px;min-height:1.5em;margin:0}
+.stars{color:var(--laser);letter-spacing:2px}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{min-width:46px;min-height:40px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;cursor:pointer;font:600 14px Barlow,sans-serif}
+.chips button.done{background:var(--ink);color:var(--bg)}.chips button[aria-current=true]{outline:2px solid var(--laser);outline-offset:1px}
+.lv{font:700 16px "Barlow Semi Condensed",sans-serif;margin:4px 0 0}.lvrow{display:grid;grid-template-columns:64px minmax(0,1fr);gap:8px;align-items:start;margin-top:6px}.lvname{font-size:13px;color:var(--muted);padding-top:9px}
+.presets button{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer;min-height:36px;font-size:14px}
+[hidden]{display:none!important}
+.dims{font-variant-numeric:tabular-nums;white-space:nowrap}
+textarea{width:100%;min-height:90px;font:13px ui-monospace,monospace;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px}
+@media (prefers-reduced-motion:no-preference){.pc{transition:transform .12s ease-out}.pc.drag{transition:none}}
+/* Site modes: home (list of sets), player (one set, from a QR code), maker (the full tool). */
+[data-mode=home] .top,[data-mode=home] main{display:none}
+[data-mode=player] .home,[data-mode=maker] .home{display:none}
+[data-mode=player] .maker-only,[data-mode=home] .maker-only{display:none!important}
+.player-only{display:none}[data-mode=player] .player-only{display:block}
+.crumb{margin:0 0 4px;font-size:15px}.crumb a,.foot a{color:var(--ink)}
+.home{max-width:1280px;margin:0 auto;padding:28px max(4vw,16px) 48px}
+.home h1{font-size:clamp(32px,5vw,48px)}
+.sets{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;margin-top:20px}
+.set{display:grid;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;color:var(--ink);text-decoration:none}
+.set:hover{border-color:var(--muted)}.set svg{width:100%;height:150px}
+.set b{font:700 20px/1.2 "Barlow Semi Condensed",sans-serif}.set span{font-size:14px;color:var(--muted)}
+.foot{margin-top:28px;font-size:15px}
+input[type=text]{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-height:42px}
+.url{font-family:ui-monospace,monospace;font-size:13px;overflow-wrap:anywhere;color:var(--ink)}
+.qrbox{width:132px;background:#fff;padding:8px;border-radius:8px;border:1px solid var(--line)}.qrbox svg{display:block;width:100%;height:auto}
+.qrbox:empty{display:none}

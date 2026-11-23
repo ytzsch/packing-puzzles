@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en-GB" data-mode="home">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wooden Packing Puzzles</title>
+<meta name="description" content="Play wooden packing puzzles and their challenges, with hints and solutions.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="app.css">
+<script>{const q=new URLSearchParams(location.search);document.documentElement.dataset.mode=q.has('maker')?'maker':q.get('set')?'player':'home'}</script>
+</head>
+<body>
+<!-- HOME: list of published sets -->
+<section id="home" class="home">
+  <h1>Wooden packing puzzles</h1>
+  <p class="lede">Every piece has to fit in the tray. Pick a puzzle to play it here, then try its challenges. Stuck? Hints show one piece at a time.</p>
+  <div class="sets" id="sets"><p class="note">Loading puzzles…</p></div>
+  <p class="foot"><a href="?maker">Puzzle maker</a></p>
+</section>
+
+<div class="top">
+  <div>
+    <p class="crumb player-only"><a href="./">All puzzles</a></p>
+    <h1 id="title">Packing Puzzle Maker</h1>
+    <p class="lede" id="lede">Design a tray, generate wooden pieces that fit only one way, try it on screen, then export the laser files.</p>
+  </div>
+  <div class="tabs maker-only" role="tablist" aria-label="Mode">
+    <button role="tab" id="tab-design" aria-selected="false">Design</button>
+    <button role="tab" id="tab-play" aria-selected="true">Play</button>
+    <button role="tab" id="tab-cut" aria-selected="false">Cut</button>
+  </div>
+</div>
+<main>
+  <div class="board"><svg id="svg" aria-label="Puzzle board"></svg><div class="banner" id="banner" hidden></div></div>
+  <aside>
+    <!-- DESIGN -->
+    <section class="card" id="p-design" hidden>
+      <h2>Tray</h2>
+      <div class="presets" id="presets"></div>
+      <div class="row">
+        <label>Width (squares)<input type="number" id="d-w" min="3" max="12"></label>
+        <label>Height (squares)<input type="number" id="d-h" min="3" max="12"></label>
+      </div>
+      <p class="note">Tap or drag over squares on the board to cut them out of the tray for odd shapes.</p>
+      <h2>Pieces</h2>
+      <label>The pieces should fit the tray<select id="d-many"><option value="one">One way only (a single puzzle)</option><option value="many">Many ways (for a challenge set)</option></select></label>
+      <div class="row">
+        <label>How many<input type="number" id="d-n" min="2" max="16"></label>
+        <label id="d-diffrow">Difficulty<select id="d-diff"><option value="gentle">Gentle</option><option value="medium">Medium</option><option value="hard">Fiendish</option></select></label>
+      </div>
+      <div class="row">
+        <label>Smallest piece<input type="number" id="d-min" min="2" max="10"></label>
+        <label>Largest piece<input type="number" id="d-max" min="2" max="12"></label>
+      </div>
+      <label class="check"><input type="checkbox" id="d-flip">Pieces can be turned over</label>
+      <label class="check"><input type="checkbox" id="d-distinct">Every piece a different shape</label>
+      <label class="check"><input type="checkbox" id="d-norect">No plain rectangles or bars</label>
+      <p class="msg" id="d-msg" role="status"></p>
+      <div class="btns"><button class="btn red" id="gen">Generate puzzle</button><button class="btn alt" id="stop" hidden>Stop</button></div>
+    </section>
+    <!-- PLAY -->
+    <section class="card" id="p-play">
+      <h2 id="pz-name">Puzzle</h2>
+      <div class="stat" id="pz-stat"></div>
+      <p class="note">Drag pieces into the tray. Tap a piece to turn it, or select it and use the buttons. Keys: R rotate, F flip.</p>
+      <div class="btns">
+        <button class="btn" id="rot">Rotate</button>
+        <button class="btn" id="flp">Flip</button>
+      </div>
+      <div class="btns">
+        <button class="btn alt" id="hint">Hint</button>
+        <button class="btn alt" id="sol">Show solution</button>
+        <button class="btn alt" id="shuf">Start again</button>
+      </div>
+      <p class="msg" id="p-msg" role="status"></p>
+      <button class="btn alt" id="back" hidden>Back to the main puzzle</button>
+    </section>
+    <section class="card" id="p-chal">
+      <h2>Challenges</h2>
+      <p class="note" id="ch-intro"></p>
+      <div class="maker-only">
+        <div class="row">
+          <label>Tray challenges<input type="number" id="ch-tray" min="0" max="60"></label>
+          <label>Shape challenges<input type="number" id="ch-shape" min="0" max="60"></label>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <label>Fewest pieces per shape<input type="number" id="ch-smin" min="2" max="8"></label>
+          <label>Most pieces per shape<input type="number" id="ch-smax" min="2" max="8"></label>
+        </div>
+        <div class="btns" style="margin-top:12px"><button class="btn red" id="ch-make">Make challenges</button></div>
+      </div>
+      <p class="msg" id="ch-msg" role="status"></p>
+      <div id="ch-list"></div>
+      <div class="btns"><button class="btn alt" id="ch-book" hidden>Challenge booklet to print</button></div>
+      <p class="note maker-only">The booklet is a page to print on A4: challenge cards with QR codes, the pieces, and solutions at the back.</p>
+    </section>
+    <!-- PUBLISH (maker) -->
+    <section class="card maker-only" id="p-pub">
+      <h2>Put it on the website</h2>
+      <label>Puzzle name<input type="text" id="pub-name" maxlength="60"></label>
+      <p class="note">Web address: <span id="pub-url" class="url"></span></p>
+      <div class="qrbox" id="pub-qr"></div>
+      <div class="btns"><button class="btn red" id="pub-dl">Download for the website</button></div>
+      <p class="note">Upload the file to the <b>puzzles</b> folder of the packing-puzzles repo on GitHub (Add file, then Upload files). The site updates itself a minute or two later. The QR code and the booklet use this address.</p>
+      <p class="msg" id="pub-msg" role="status"></p>
+    </section>
+    <section class="card maker-only" id="p-file">
+      <h2>Puzzle file</h2>
+      <div class="btns">
+        <button class="btn alt" id="savejson">Save puzzle</button>
+        <label class="btn alt" style="display:flex;align-items:center;justify-content:center;color:var(--ink)">Open puzzle<input type="file" id="openjson" accept=".json,application/json" hidden></label>
+      </div>
+      <p class="note">The last puzzle is kept in this browser too.</p>
+    </section>
+    <!-- CUT -->
+    <section class="card" id="p-cut" hidden>
+      <h2>Laser files</h2>
+      <div class="row">
+        <label>Square size (mm)<input type="number" id="c-cell" min="5" max="100" step="0.5"></label>
+        <label>Frame border (mm)<input type="number" id="c-border" min="4" max="60" step="0.5"></label>
+      </div>
+      <div class="row">
+        <label>Clearance (mm, each side)<input type="number" id="c-clear" min="0" max="3" step="0.05"></label>
+        <label>Kerf (mm)<input type="number" id="c-kerf" min="0" max="1" step="0.01"></label>
+      </div>
+      <label>Pieces<select id="c-mode"><option value="shared">Cut as one block (shared lines, no waste)</option><option value="separate">Cut separately (for Laser Nest)</option></select></label>
+      <div class="stat" id="c-stat"></div>
+      <p class="note">Cut everything from the same thickness as the frame. Glue the frame to the base. Shared-line pieces lose half a kerf each side, which gives an easy fit; separate pieces are kerf-corrected to true size. All lines are on layer CUT in red.</p>
+      <div class="btns"><button class="btn red" id="dldxf">Download DXF</button><button class="btn alt" id="dlsvg">SVG</button><button class="btn alt" id="dlzip">ZIP (DXF + SVG)</button></div>
+      <div class="btns"><button class="btn alt" id="cpdxf">Copy DXF text</button></div>
+      <p class="msg" id="c-msg" role="status"></p>
+    </section>
+  </aside>
+</main>
+<script src="qrcode.js"></script>
+<script src="core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
