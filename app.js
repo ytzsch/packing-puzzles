@@ -1,7 +1,7 @@
 {
 const $=id=>document.getElementById(id);
 const svg=$('svg');
-const MODE=document.documentElement.dataset.mode,Q=new URLSearchParams(location.search);
+const root=document.documentElement,MODE=root.dataset.mode,Q=new URLSearchParams(location.search);
 const SITE='https://ytzsch.github.io/packing-puzzles/';
 const esc=t=>String(t).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 const slug=t=>String(t||'puzzle').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40)||'puzzle';
@@ -68,9 +68,10 @@ function resetPlay(){
     let bw=0,bh=0;for(const[a,b]of sh){bw=Math.max(bw,a+1);bh=Math.max(bh,b+1)}return {id,sh,bw,bh,sz:Math.max(bw,bh)}});
   // Lay the waiting pieces out in rows, choosing the row width that makes the board largest on this screen.
   const layout=rowW=>{let x=0,y=G.h+1,rowH=0;const homes=[];
-    for(const f of free){if(x+f.sz>rowW&&x>0){x=0;y+=rowH+1;rowH=0}homes.push([x+Math.floor((f.sz-f.bw)/2),y+Math.floor((f.sz-f.bh)/2)]);x+=f.sz+1;rowH=Math.max(rowH,f.sz)}
+    for(const f of free){if(x+f.bw>rowW&&x>0){x=0;y+=rowH+1;rowH=0}homes.push([x,y]);x+=f.bw+1;rowH=Math.max(rowH,f.bh)}
     return {homes,W:Math.max(rowW,G.w)+2,H:(free.length?y+rowH:G.h)+2}};
-  const availW=Math.max(280,svg.parentNode.clientWidth-24),availH=Math.max(320,innerHeight*.78);
+  const box=svg.parentNode.getBoundingClientRect(),appPlayView=MODE==='app'&&root.dataset.view==='play';
+  const availW=Math.max(260,box.width-(appPlayView?8:24)),availH=appPlayView?Math.max(240,box.height-8):Math.max(320,innerHeight*.78);
   const maxSz=Math.max(0,...free.map(f=>f.sz));let best=null;
   for(let rw=Math.max(G.w,maxSz);rw<=Math.max(G.w,maxSz)+30;rw++){const L=layout(rw),sc=Math.min(availW/L.W,availH/L.H);if(!best||sc>best.sc+1e-9)best={sc,L,rw}}
   free.forEach((f,i)=>{const home=best.L.homes[i];ps.push({id:f.id,shape:f.sh,home,x:home[0],y:home[1],inTray:false,at:0})});
@@ -158,7 +159,13 @@ function drop(p){
   if(inT===A.length&&!hit){if(!p.inTray)p.at=Date.now();p.inTray=true;return}
   p.inTray=false;
   if(inT===0&&!hit&&inside)return;
-  p.x=p.home[0];p.y=p.home[1]}
+  const f=findFree(p);if(f){p.x=f.x;p.y=f.y}else{p.x=p.home[0];p.y=p.home[1]}}
+/* Nearest place below the tray where the piece fits without touching another piece. */
+function findFree(p){const occ=occupied(p),mx=world.x1-2,my=world.y1-2;let best=null;
+  for(let y=G.h+1;y<=my;y++)for(let x=0;x<=mx;x++){
+    if(p.shape.some(([a,b])=>a+x>mx||b+y>my||occ.has((a+x)+','+(b+y))))continue;
+    const d=(x-p.x)**2+(y-p.y)**2;if(!best||d<best.d)best={x,y,d}}
+  return best}
 function turn(p,how){
   if(!p||solved||p.fixed)return;
   const n=p.shape.length;let cx=0,cy=0;for(const[a,b]of p.shape){cx+=a;cy+=b}cx/=n;cy/=n;
@@ -226,7 +233,7 @@ function runJob(o,msgEl,done){
   stopAll();running=true;busy(true);
   $(msgEl).textContent=o.job==='challenges'?'Making challenges…':'Trying layouts…';
   const onMsg=m=>{if(m.ready)return;
-    if(m.tick){$(msgEl).textContent=o.job==='challenges'?`Making challenges… ${m.found} so far.`:`Trying layouts… ${m.tries} tried, ${m.found} ${o.many?'fit many ways':'fit only one way'}.`;return}
+    if(m.tick){$(msgEl).textContent=o.job==='level'?'Making a new puzzle…':o.job==='challenges'?`Making challenges… ${m.found} so far.`:`Trying layouts… ${m.tries} tried, ${m.found} ${o.many?'fit many ways':'fit only one way'}.`;return}
     stopAll();done(m)};
   let alive=false;
   const fallback=()=>{if(worker){try{worker.terminate()}catch(e){}worker=null}if(!running)return;
@@ -440,7 +447,7 @@ function player(){
   .catch(()=>{$('title').textContent='Puzzle not found';$('lede').innerHTML='That puzzle isn\'t here. <a href="./">See all puzzles</a>.';svg.innerHTML=''})}
 /* ---------- App: library of graded puzzles, new puzzles made on the phone, published sets ---------- */
 let PACK=null,SETS=null,installEvt=null;
-const root=document.documentElement;
+
 function loadPack(){if(PACK)return Promise.resolve(PACK);
   return Promise.all([1,2,3,4,5].map(l=>fetch('pack/level-'+l+'.json').then(r=>r.ok?r.json():[]).catch(()=>[]))).then(levels=>{
     PACK=[];levels.forEach(list=>list.forEach(p=>{const num=PACK.length+1;PACK.push(Object.assign({},p,{packNum:num,name:'Puzzle '+num,id:'pack-'+num,created:'pack-'+num,challenges:[]}))}));return PACK})}
@@ -456,25 +463,34 @@ function appHome(){
       return `<section class="lvl"><h2>${chillies(l,20)}<span>${L.filter(p=>done['pack-'+p.packNum]).length} of ${L.length}</span></h2><div class="tiles">${L.map(p=>`<a class="tile${done['pack-'+p.packNum]?' done':''}" href="#p${p.packNum}" aria-label="Puzzle ${p.packNum}${done['pack-'+p.packNum]?', solved':''}">${p.packNum}</a>`).join('')}</div></section>`}).join('')});
   loadSets().then(list=>{list=list.filter(s=>s.tray+s.shape>0);
     $('app-sets').innerHTML=list.length?`<section class="lvl"><h2>Challenge sets</h2><div class="sets">${list.map(s=>`<a class="set" href="#set-${encodeURIComponent(s.id)}">${miniSVG(s.w,s.h,s.mask,[],false)}<b>${esc(s.name)}</b>${s.level?chillies(s.level,16):''}<span>${s.pieces} pieces · ${s.tray+s.shape} challenges</span></a>`).join('')}</div></section>`:''})}
-function appPlay(title,lede){root.dataset.view='play';$('next').hidden=true;$('title').textContent=title;$('lede').innerHTML=lede||'';document.title=title+' · Packing Puzzles';window.scrollTo(0,0)}
+function appPlay(title,lede){root.dataset.view='play';$('next').hidden=true;sheet(false);$('title').textContent=title;$('lede').innerHTML=lede||'';document.title=title+' · Packing Puzzles';window.scrollTo(0,0)}
 function appRoute(){
   const h=decodeURIComponent(location.hash.slice(1));
   if(!h)return appHome();
   let m;
   if(m=h.match(/^p(\d+)$/)){appPlay('Puzzle '+m[1],'');puz=null;render();
     loadPack().then(pack=>{const p=pack[+m[1]-1];if(!p){location.hash='';return}
-      loadPuzzle(Object.assign({},p));$('lede').innerHTML=chillies(p.level,20)+' Fit every piece into the tray. There is only one way.';$('p-chal').hidden=true})}
-  else if(m=h.match(/^new([1-5])$/)){const l=+m[1];appPlay('New puzzle',chillies(l,20)+' Being made on your phone…');puz=null;render();$('p-chal').hidden=true;
+      $('lede').innerHTML=chillies(p.level,16);loadPuzzle(Object.assign({},p));$('p-chal').hidden=true;tbChal()})}
+  else if(m=h.match(/^new([1-5])$/)){const l=+m[1];appPlay('New puzzle',chillies(l,16));$('p-msg').textContent='Making a new puzzle…';puz=null;render();$('p-chal').hidden=true;
     runJob({job:'level',level:l,time:25000},'p-msg',r=>{if(!r.found){$('p-msg').textContent='Couldn\'t make one this time. Try again.';return}
       const p={v:2,name:'New puzzle',w:r.w,h:r.h,mask:r.mask,flip:true,many:false,count:1,pieces:r.pieces,nodes:r.nodes,human:r.human,level:r.level,challenges:[],created:'new-'+Date.now(),fresh:l};
-      loadPuzzle(p);$('p-msg').textContent='';$('p-chal').hidden=true;$('lede').innerHTML=chillies(r.level,20)+' Fit every piece into the tray. There is only one way.'})}
+      $('lede').innerHTML=chillies(r.level,16);loadPuzzle(p);$('p-msg').textContent='';$('p-chal').hidden=true;tbChal()})}
   else if(h.startsWith('set-')){const id=h.slice(4);appPlay('Loading…','');puz=null;render();
-    fetch('puzzles/'+encodeURIComponent(id)+'.json').then(r=>{if(!r.ok)throw 0;return r.json()}).then(p=>{p.id=p.id||id;p.challenges=p.challenges||[];p.created=p.created||id;loadPuzzle(p);$('p-chal').hidden=false;
-      $('title').textContent=p.name;$('lede').textContent=p.many?'Fill the tray with all the pieces, then try the challenges below.':'Fit every piece into the tray.'})
+    fetch('puzzles/'+encodeURIComponent(id)+'.json').then(r=>{if(!r.ok)throw 0;return r.json()}).then(p=>{p.id=p.id||id;p.challenges=p.challenges||[];p.created=p.created||id;$('lede').innerHTML=p.level?chillies(p.level,16):'';loadPuzzle(p);$('p-chal').hidden=false;$('title').textContent=p.name;tbChal()})
     .catch(()=>{$('title').textContent='Not available offline';$('lede').textContent='Open this set once while online to keep it on your phone.'})}
   else location.hash=''}
+function sheet(open){$('p-chal').classList.toggle('open',!!open);$('tb-chal')?.setAttribute('aria-expanded',String(!!open))}
+function tbChal(){const has=!!(puz&&puz.challenges&&puz.challenges.length);$('tb-chal').hidden=!has;$('back').hidden=!chal}
 function app(){
   setMode('play');
+  // One-screen play layout: messages float over the board, Next sits on the board, challenges open as a panel.
+  const board=svg.parentNode;board.append($('p-msg'),$('next'));document.body.append($('p-chal'));$('p-chal').prepend($('back'));
+  let tm=null;new MutationObserver(()=>{clearTimeout(tm);if($('p-msg').textContent)tm=setTimeout(()=>$('p-msg').textContent='',3500)}).observe($('p-msg'),{childList:true,characterData:true,subtree:true});
+  const need=()=>{if(sel==null||!P(sel)){$('p-msg').textContent='Tap a piece first, or flick it.';return null}return P(sel)};
+  $('tb-rot').onclick=()=>{const p=need();if(p)turn(p,'rot')};$('tb-flip').onclick=()=>{const p=need();if(p)turn(p,'flip')};
+  $('tb-hint').onclick=hint;$('tb-restart').onclick=()=>puz&&resetPlay();$('tb-sol').onclick=()=>puz&&showSolution();
+  $('tb-chal').onclick=()=>sheet(!$('p-chal').classList.contains('open'));$('sheet-close').onclick=()=>sheet(false);
+  $('ch-list').addEventListener('click',()=>setTimeout(()=>{sheet(false);tbChal()},0));$('back').addEventListener('click',()=>{sheet(false);setTimeout(tbChal,0)});
   $('app-new').onclick=e=>{const b=e.target.closest('button');if(b)location.hash='new'+b.dataset.l};
   $('app-back').onclick=e=>{e.preventDefault();location.hash=''};
   $('next').onclick=()=>{if(puz?.fresh){const h='new'+puz.fresh;if(location.hash==='#'+h)appRoute();else location.hash=h;return}

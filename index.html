@@ -110,7 +110,7 @@
       <button class="btn red app-only" id="next" hidden>Next puzzle</button>
     </section>
     <section class="card" id="p-chal">
-      <h2>Challenges</h2>
+      <div class="sheethead"><h2>Challenges</h2><button type="button" class="app-only closebtn" id="sheet-close" aria-label="Close">✕</button></div>
       <p class="note" id="ch-intro"></p>
       <div class="maker-only">
         <div class="row">
@@ -167,6 +167,14 @@
     </section>
   </aside>
 </main>
+<nav class="toolbar" id="toolbar" aria-label="Puzzle tools">
+  <button type="button" id="tb-rot"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v5h-5"/></svg><span>Rotate</span></button>
+  <button type="button" id="tb-flip"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18"/><path d="M8 7 3 12l5 5V7z"/><path d="M16 7l5 5-5 5V7z"/></svg><span>Flip</span></button>
+  <button type="button" id="tb-hint"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg><span>Hint</span></button>
+  <button type="button" id="tb-restart"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v5h5"/></svg><span>Restart</span></button>
+  <button type="button" id="tb-sol"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 12l3 3 5-6"/></svg><span>Answer</span></button>
+  <button type="button" id="tb-chal" hidden aria-expanded="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>Challenges</span></button>
+</nav>
 <script src="qrcode.js"></script>
 <script src="core.js"></script>
 <script src="app.js"></script>
