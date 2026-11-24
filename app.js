@@ -219,7 +219,7 @@ function genOpts(d){const big=d.mask.filter(Boolean).length>40;
   return {job:'gen',w:d.w,h:d.h,mask:d.mask,n:d.n,min:d.min,max:d.max,flip:d.flip,distinct:d.distinct,noRect:d.noRect,diff:d.diff,many:!!d.many,
     time:big?14000:7000,want:d.many?2:(d.diff==='medium'?8:16),limit:big?4e6:1.5e6}}
 function makePuz(d,m){const n=(store.count=(store.count||0)+1);persist();
-  return {v:2,name:`Puzzle ${n}`,w:d.w,h:d.h,mask:d.mask.slice(),flip:d.flip,many:!!d.many,count:m.count||1,pieces:m.pieces,nodes:m.nodes,challenges:[],created:new Date().toISOString()}}
+  return {v:2,name:d.many?`Puzzle ${n}`:`Puzzle ${n} (${rating(m.nodes)}/5)`,w:d.w,h:d.h,mask:d.mask.slice(),flip:d.flip,many:!!d.many,count:m.count||1,pieces:m.pieces,nodes:m.nodes,challenges:[],created:new Date().toISOString()}}
 $('gen').onclick=()=>runJob(genOpts(draft),'d-msg',m=>{
   if(!m.found){$('d-msg').textContent=draft.many?`No set fitted the tray 20 or more ways after ${m.tries} tries. Try a bigger tray, smaller pieces, or allow turning over.`:`No layout with a single solution after ${m.tries} tries. Try fewer or larger pieces, untick "Every piece a different shape", or allow turning over.`;return}
   loadPuzzle(makePuz(draft,m));setMode('play');
@@ -407,6 +407,6 @@ if(MODE==='home')home();
 else if(MODE==='player')player();
 else{setMode('play');
 if(puz)loadPuzzle(puz);
-else{const d0=Object.assign({},draft,{w:6,h:5,n:6,min:4,max:6,mask:new Array(30).fill(1),diff:'medium',many:false});runJob(genOpts(d0),'p-msg',m=>{if(!m.found){$('p-msg').textContent='Open Design to make a puzzle.';return}const p=makePuz(d0,m);p.name='Puzzle 1';loadPuzzle(p);$('p-msg').textContent=''})}
+else{const d0=Object.assign({},draft,{w:6,h:5,n:6,min:4,max:6,mask:new Array(30).fill(1),diff:'medium',many:false});runJob(genOpts(d0),'p-msg',m=>{if(!m.found){$('p-msg').textContent='Open Design to make a puzzle.';return}const p=makePuz(d0,m);loadPuzzle(p);$('p-msg').textContent=''})}
 }
 }
