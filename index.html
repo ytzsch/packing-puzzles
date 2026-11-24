@@ -126,7 +126,7 @@
       </div>
       <label>Pieces<select id="c-mode"><option value="inside">Inside the frame's window (least wood)</option><option value="shared">As one block below the frame (uses clearance)</option><option value="separate">Cut separately (for Laser Nest)</option></select></label>
       <div class="stat" id="c-stat"></div>
-      <p class="note">Cut everything from the same thickness and glue the frame to the base. Inside the window: the pieces come from the window's offcut and the fit comes from the kerf (clearance isn't used). In RDWorks, check the blue PIECES layer is at the top of the layer list so it cuts before the red window line frees the block. One block below: clearance is added round the window. Separate pieces are kerf-corrected to true size.</p>
+      <p class="note">Cut everything from the same thickness and glue the frame to the base. Inside the window: the pieces come from the window's offcut and the fit comes from the kerf (clearance isn't used). In RDWorks the layers should come in as blue PIECES, red CUT (window, frame outside), magenta BASE; if not, reorder them so blue cuts before the red window line frees the block. One block below: clearance is added round the window. Separate pieces are kerf-corrected to true size.</p>
       <div class="btns"><button class="btn red" id="dldxf">Download DXF</button><button class="btn alt" id="dlsvg">SVG</button><button class="btn alt" id="dlzip">ZIP (DXF + SVG)</button></div>
       <div class="btns"><button class="btn alt" id="cpdxf">Copy DXF text</button></div>
       <p class="msg" id="c-msg" role="status"></p>
