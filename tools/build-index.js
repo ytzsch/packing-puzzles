@@ -9,7 +9,7 @@ for (const f of fs.readdirSync(dir).sort()) {
     const p = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
     const id = f.slice(0, -5);
     const ch = p.challenges || [];
-    list.push({ id, name: p.name || id, w: p.w, h: p.h, mask: p.mask, pieces: p.pieces.length, many: !!p.many,
+    list.push({ id, name: p.name || id, w: p.w, h: p.h, mask: p.mask, pieces: p.pieces.length, many: !!p.many, level: p.level || null,
       tray: ch.filter(c => c.type === 'tray').length, shape: ch.filter(c => c.type === 'shape').length, created: p.created || '' });
   } catch (e) { console.error('Skipped ' + f + ': ' + e.message); }
 }

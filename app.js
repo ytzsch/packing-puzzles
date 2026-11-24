@@ -7,6 +7,27 @@ const esc=t=>String(t).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 const slug=t=>String(t||'puzzle').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40)||'puzzle';
 const siteBase=()=>MODE==='player'?location.origin+location.pathname.replace(/index\.html$/,''):SITE;
 const setURL=(id,c)=>siteBase()+'?set='+encodeURIComponent(id)+(c?'&c='+c:'');
+/* A chilli, in a 1x1 box: curved body, calyx and stem as separate closed shapes (for laser scan-engraving). */
+const CHILLI=(()=>{const P0=[.30,.30],P1=[.27,.88],P2=[.95,.95];
+  const B=t=>[(1-t)**2*P0[0]+2*(1-t)*t*P1[0]+t*t*P2[0],(1-t)**2*P0[1]+2*(1-t)*t*P1[1]+t*t*P2[1]];
+  const D=t=>[2*(1-t)*(P1[0]-P0[0])+2*t*(P2[0]-P1[0]),2*(1-t)*(P1[1]-P0[1])+2*t*(P2[1]-P1[1])];
+  const hw=t=>.17*Math.pow(1-t,.7),L=[],R=[];
+  for(let i=0;i<=24;i++){const t=i/24,[x,y]=B(t),[dx,dy]=D(t),l=Math.hypot(dx,dy),nx=-dy/l,ny=dx/l,w=hw(t);L.push([x+nx*w,y+ny*w]);R.push([x-nx*w,y-ny*w])}
+  const[dx0,dy0]=D(0),a0=Math.atan2(dy0,dx0),w0=hw(0),cap=[];
+  for(let i=1;i<12;i++){const a=a0+1.5*Math.PI-i*Math.PI/12;cap.push([P0[0]+Math.cos(a)*w0,P0[1]+Math.sin(a)*w0])}
+  const body=[...L,...R.slice().reverse().slice(1),...cap];
+  const ring=(r1,r2,from,to)=>{const o=[],n=10;for(let i=0;i<=n;i++){const a=from+(to-from)*i/n;o.push([P0[0]+Math.cos(a)*r2,P0[1]+Math.sin(a)*r2])}for(let i=n;i>=0;i--){const a=from+(to-from)*i/n;o.push([P0[0]+Math.cos(a)*r1,P0[1]+Math.sin(a)*r1])}return o};
+  const back=a0+Math.PI,calyx=ring(w0+.02,w0+.07,back-1.25,back+1.25);
+  const u=[Math.cos(back),Math.sin(back)],S0=[P0[0]+u[0]*(w0+.09),P0[1]+u[1]*(w0+.09)],S1=[S0[0]+.13,S0[1]-.14],C=[S0[0]-.03,S0[1]-.10],st=[],sb=[];
+  for(let i=0;i<=8;i++){const t=i/8,x=(1-t)**2*S0[0]+2*(1-t)*t*C[0]+t*t*S1[0],y=(1-t)**2*S0[1]+2*(1-t)*t*C[1]+t*t*S1[1];
+    const dx=2*(1-t)*(C[0]-S0[0])+2*t*(S1[0]-C[0]),dy=2*(1-t)*(C[1]-S0[1])+2*t*(S1[1]-C[1]),l=Math.hypot(dx,dy),w=.032;st.push([x-dy/l*w,y+dx/l*w]);sb.push([x+dy/l*w,y-dx/l*w])}
+  const stem=[...st,...sb.reverse()];
+  let mx=1,my=1,Mx=0,My=0;for(const p of[...body,...calyx,...stem]){mx=Math.min(mx,p[0]);my=Math.min(my,p[1]);Mx=Math.max(Mx,p[0]);My=Math.max(My,p[1])}
+  const k=1/Math.max(Mx-mx,My-my);return [body,calyx,stem].map(P=>P.map(([x,y])=>[(x-mx)*k,(y-my)*k]))})();
+const chilliD=(x,y,s)=>CHILLI.map(P=>'M'+P.map(([a,b])=>(x+a*s).toFixed(3)+' '+(y+b*s).toFixed(3)).join('L')+'Z').join('');
+function chillies(n,size){if(!n)return '';let s='';for(let i=0;i<5;i++)s+=`<svg viewBox="-.03 -.03 1.06 1.06" width="${size}" height="${size}" aria-hidden="true"><path d="${chilliD(0,0,1)}" fill="${i<n?'#d4231b':'none'}" stroke="${i<n?'none':'currentColor'}" stroke-width=".05" opacity="${i<n?1:.35}"/></svg>`;
+  return `<span class="chillies" role="img" aria-label="${n} of 5 chillies">${s}</span>`}
+function ensureLevel(p){if(!p.many&&!p.level&&p.pieces){p.human=humanEffort(p.w,p.h,p.mask,p.pieces,p.flip,6);p.level=levelOf(p.human)}return p}
 function qrSVG(url){try{if(typeof qrcode!=='function')return '';const q=qrcode(0,'M');q.addData(url);q.make();return q.createSvgTag({cellSize:1,margin:2,scalable:true})}catch(e){return ''}}
 const WOOD=['#e3c393','#c48a4f','#9c5b3b','#6e4b33','#efd8ae','#b8743f','#d6a86c','#8a6a4c','#f2cf95','#a9805a','#d99263','#7f5a3e','#e8bb7a','#b5946c','#c27a52','#5f4330'];
 const PRESETS=[
@@ -21,7 +42,7 @@ const OPT_KEYS=['cell','border','clear','kerf','mode'];
 const SKEY=MODE==='maker'?'packpuz':'packpuz-play';
 let store={};try{store=JSON.parse(localStorage.getItem(SKEY)||'{}')}catch(e){}
 const persist=()=>{try{localStorage.setItem(SKEY,JSON.stringify(store))}catch(e){}};
-let cut=Object.assign({cell:20,border:12,clear:0.3,kerf:0.15,mode:'inside'},store.cut||{});
+let cut=Object.assign({cell:20,border:12,clear:0.3,kerf:0.15,mode:'inside',chilli:true},store.cut||{});
 let draft=Object.assign({w:6,h:5,n:6,min:4,max:6,flip:true,distinct:true,noRect:true,diff:'medium',many:false,mask:null},store.draft||{});
 if(!draft.mask||draft.mask.length!==draft.w*draft.h)draft.mask=new Array(draft.w*draft.h).fill(1);
 let puz=MODE==='maker'?store.puzzle||null:null,mode='play',ps=[],sel=null,G=null,chal=null,cls=[],hints=0,t0=null,solved=false,worker=null,running=false;
@@ -30,7 +51,7 @@ const P=id=>ps.find(p=>p.id===id);
 
 /* ---------- Puzzle setup ---------- */
 function loadPuzzle(p){
-  puz=p;if(MODE==='maker'){store.puzzle=p;persist()}cls=p.pieces.map(c=>shapeKey(c,p.flip));
+  puz=ensureLevel(p);if(MODE==='maker'){store.puzzle=p;persist()}cls=p.pieces.map(c=>shapeKey(c,p.flip));
   openGame(null);renderChallenges();if(MODE==='maker')updatePub()}
 function openGame(c){
   chal=c;
@@ -57,9 +78,9 @@ function resetPlay(){
 let world={x0:-1,y0:-1,x1:8,y1:8};
 function renderInfo(){
   const cellsN=G.mask.filter(Boolean).length;
-  if(!chal){$('pz-name').textContent=puz.name||'Puzzle';const r=rating(puz.nodes||10);
+  if(!chal){$('pz-name').textContent=puz.name||'Puzzle';
     $('pz-stat').innerHTML=`<span>Tray <b>${puz.w}×${puz.h}</b> (${cellsN} squares)</span><span><b>${puz.pieces.length}</b> pieces</span>`+
-      (puz.many?`<span>Fits the tray <b>${puz.count>=60?'60+':puz.count}</b> ways</span>`:`<span>Difficulty <span class="stars" aria-label="${r} of 5">${'●'.repeat(r)}${'○'.repeat(5-r)}</span></span>`)+
+      (puz.many?`<span>Fits the tray <b>${puz.count>=60?'60+':puz.count}</b> ways</span>`:`<span>Difficulty ${chillies(puz.level,18)}</span>`)+
       `<span>${puz.flip?'Pieces turn over':'No turning over'}</span>`}
   else{$('pz-name').textContent=`Challenge ${chal.num} · ${chal.level}`;
     $('pz-stat').innerHTML=chal.type==='tray'?`<span><b>${chal.fixed.length}</b> starter piece${chal.fixed.length>1?'s':''} placed</span><span>Fill the tray with the other <b>${puz.pieces.length-chal.fixed.length}</b></span>`:`<span>Build this shape with the <b>${chal.ids.length}</b> pieces shown</span><span>${cellsN} squares</span>`}
@@ -213,13 +234,13 @@ function sliced(o,onMsg){
     while(Date.now()-ts<40&&Date.now()-t0<o.time&&cands.length<o.want){tries++;const c=tryOne(oo,syms);if(c)cands.push(c)}
     if(Date.now()-t0<o.time&&cands.length<o.want){onMsg({tick:true,tries,found:cands.length});setTimeout(step,0);return}
     sliceJob=null;if(!cands.length){onMsg({done:true,tries,found:0});return}
-    const p=pickCand(cands,o);onMsg({done:true,tries,found:cands.length,pieces:p.pieces,nodes:p.nodes,count:p.count})};
+    const p=pickCand(cands,o);onMsg({done:true,tries,found:cands.length,pieces:p.pieces,nodes:p.nodes,count:p.count,human:p.human,level:p.level})};
   setTimeout(step,0)}
 function genOpts(d){const big=d.mask.filter(Boolean).length>40;
   return {job:'gen',w:d.w,h:d.h,mask:d.mask,n:d.n,min:d.min,max:d.max,flip:d.flip,distinct:d.distinct,noRect:d.noRect,diff:d.diff,many:!!d.many,
     time:big?14000:7000,want:d.many?2:(d.diff==='medium'?8:16),limit:big?4e6:1.5e6}}
 function makePuz(d,m){const n=(store.count=(store.count||0)+1);persist();
-  return {v:2,name:d.many?`Puzzle ${n}`:`Puzzle ${n} (${rating(m.nodes)}/5)`,w:d.w,h:d.h,mask:d.mask.slice(),flip:d.flip,many:!!d.many,count:m.count||1,pieces:m.pieces,nodes:m.nodes,challenges:[],created:new Date().toISOString()}}
+  return {v:2,name:d.many?`Puzzle ${n}`:`Puzzle ${n} (${m.level}/5)`,level:m.level,human:m.human,w:d.w,h:d.h,mask:d.mask.slice(),flip:d.flip,many:!!d.many,count:m.count||1,pieces:m.pieces,nodes:m.nodes,challenges:[],created:new Date().toISOString()}}
 $('gen').onclick=()=>runJob(genOpts(draft),'d-msg',m=>{
   if(!m.found){$('d-msg').textContent=draft.many?`No set fitted the tray 20 or more ways after ${m.tries} tries. Try a bigger tray, smaller pieces, or allow turning over.`:`No layout with a single solution after ${m.tries} tries. Try fewer or larger pieces, untick "Every piece a different shape", or allow turning over.`;return}
   loadPuzzle(makePuz(draft,m));setMode('play');
@@ -324,7 +345,11 @@ function geometry(){
       for(const L of loops(n))polys.push(offsetLoop(L,kf/2/C).map(([a,b])=>[x+kf/2+a*C,y+kf/2+b*C]));
       x+=pw+gap;rowH=Math.max(rowH,ph)}
     H=y+rowH}
-  const m=kf;return{polys,lines,W:W+2*m,H:H+2*m,m,fw,fh,inside}}
+  // Difficulty chillies, scan-engraved along the frame's top border.
+  const engr=[];
+  if(cut.chilli&&puz.level&&!puz.many&&B>=6){const hc=Math.min(9,B*.7),sp=hc*1.05,x0=fw/2-puz.level*sp/2,y0=(B-hc)/2;
+    for(let i=0;i<puz.level;i++)for(const P of CHILLI)engr.push(P.map(([a,b])=>[x0+i*sp+a*hc,y0+b*hc]))}
+  const m=kf;return{polys,lines,engr,W:W+2*m,H:H+2*m,m,fw,fh,inside}}
 const BLUE='#1f5fd6',MAGENTA='#c026d3';
 function renderCut(){
   if(!puz){svg.innerHTML='';return}
@@ -333,18 +358,20 @@ function renderCut(){
   const sw=Math.max(g.W,g.H)/450;
   let s=`<rect x="${-pad/2}" y="${-pad/2}" width="${g.W+pad}" height="${g.H+pad}" fill="var(--slot)" rx="2"/>`;
   s+=g.polys.map(p=>`<path d="M${p.map(v=>(v[0]+g.m).toFixed(2)+' '+(v[1]+g.m).toFixed(2)).join('L')}Z" fill="none" stroke="${p.L==='BASE'?MAGENTA:'var(--laser)'}" stroke-width="${sw}"/>`).join('');
+  s+=g.engr.map(p=>`<path d="M${p.map(v=>(v[0]+g.m).toFixed(2)+' '+(v[1]+g.m).toFixed(2)).join('L')}Z" fill="#16a34a"/>`).join('');
   s+=g.lines.map(l=>`<line x1="${l[0]+g.m}" y1="${l[1]+g.m}" x2="${l[2]+g.m}" y2="${l[3]+g.m}" stroke="${l[4]==='PIECES'?BLUE:'var(--laser)'}" stroke-width="${sw*(l[4]==='PIECES'?1.4:1)}"/>`).join('');
   const fs=Math.max(g.W,g.H)/45;
-  s+=`<text x="${g.m+g.fw/2}" y="${g.m+fs*1.2}" font-size="${fs}" text-anchor="middle" fill="var(--muted)" font-family="Barlow">Frame${g.inside?' + pieces':''}</text><text x="${g.m+g.fw*1.5+6}" y="${g.m+g.fh/2}" font-size="${fs}" text-anchor="middle" fill="var(--muted)" font-family="Barlow">Base</text>`;
+  s+=`<text x="${g.m+g.fw/2}" y="${g.m+g.fh-(+cut.border)/2+fs*.35}" font-size="${fs}" text-anchor="middle" fill="var(--muted)" font-family="Barlow">Frame${g.inside?' + pieces':''}</text><text x="${g.m+g.fw*1.5+6}" y="${g.m+g.fh/2}" font-size="${fs}" text-anchor="middle" fill="var(--muted)" font-family="Barlow">Base</text>`;
   svg.innerHTML=s;
   $('c-stat').innerHTML=`<span>Sheet needed <b class="dims">${g.W.toFixed(0)} × ${g.H.toFixed(0)} mm</b></span><span>Frame and base <b class="dims">${g.fw.toFixed(1)} × ${g.fh.toFixed(1)} mm</b></span>`+
-    `<span>Layer order: ${g.inside?`<b style="color:${BLUE}">blue</b> PIECES (lines between pieces), then `:''}<b style="color:var(--laser)">red</b> CUT (window, then frame outside${g.inside?'':', pieces'}), then <b style="color:${MAGENTA}">magenta</b> BASE.${g.inside?` Fit comes from the kerf: about ${(+cut.kerf).toFixed(2)} mm play on each outside edge.`:''}</span>`}
+    `<span>Layer order: ${g.engr.length?'<b style="color:#16a34a">green</b> ENGRAVE (scan the chillies), then ':''}${g.inside?`<b style="color:${BLUE}">blue</b> PIECES (lines between pieces), then `:''}<b style="color:var(--laser)">red</b> CUT (window, then frame outside${g.inside?'':', pieces'}), then <b style="color:${MAGENTA}">magenta</b> BASE.${g.inside?` Fit comes from the kerf: about ${(+cut.kerf).toFixed(2)} mm play on each outside edge.`:''}</span>`}
 function toDXF(g){
-  const f=v=>(+v).toFixed(3),Y=y=>f(g.H-(y+g.m)),X=x=>f(x+g.m),ACI={CUT:1,PIECES:5,BASE:6};
+  const f=v=>(+v).toFixed(3),Y=y=>f(g.H-(y+g.m)),X=x=>f(x+g.m),ACI={CUT:1,PIECES:5,BASE:6,ENGRAVE:3};
   let s='0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n70\n4\n0\nENDSEC\n0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n70\n2\n';
-  for(const n of g.inside?['PIECES','CUT','BASE']:['CUT','BASE'])s+=`0\nLAYER\n2\n${n}\n70\n0\n62\n${ACI[n]}\n6\nCONTINUOUS\n`;
+  for(const n of[...(g.engr.length?['ENGRAVE']:[]),...(g.inside?['PIECES']:[]),'CUT','BASE'])s+=`0\nLAYER\n2\n${n}\n70\n0\n62\n${ACI[n]}\n6\nCONTINUOUS\n`;
   s+='0\nENDTAB\n0\nENDSEC\n0\nSECTION\n2\nENTITIES\n';
-  // Written in cutting order: lines between pieces, then the window, frame outside and base.
+  // Written in cutting order: engraving, lines between pieces, then the window, frame outside and base.
+  for(const p of g.engr){s+='0\nPOLYLINE\n8\nENGRAVE\n62\n3\n66\n1\n10\n0\n20\n0\n30\n0\n70\n1\n';for(const v of p)s+=`0\nVERTEX\n8\nENGRAVE\n10\n${X(v[0])}\n20\n${Y(v[1])}\n30\n0\n`;s+='0\nSEQEND\n8\nENGRAVE\n'}
   for(const l of g.lines){const L=l[4]||'CUT';s+=`0\nLINE\n8\n${L}\n62\n${ACI[L]}\n10\n${X(l[0])}\n20\n${Y(l[1])}\n30\n0\n11\n${X(l[2])}\n21\n${Y(l[3])}\n31\n0\n`}
   const polys=g.polys.filter(p=>p.L!=='BASE').concat(g.polys.filter(p=>p.L==='BASE'));
   for(const p of polys){const L=p.L||'CUT';s+=`0\nPOLYLINE\n8\n${L}\n62\n${ACI[L]}\n66\n1\n10\n0\n20\n0\n30\n0\n70\n1\n`;for(const v of p)s+=`0\nVERTEX\n8\n${L}\n10\n${X(v[0])}\n20\n${Y(v[1])}\n30\n0\n`;s+=`0\nSEQEND\n8\n${L}\n`}
@@ -352,6 +379,7 @@ function toDXF(g){
 function toSVG(g){const f=v=>(+v).toFixed(3),pa=p=>`<path d="M${p.map(v=>f(v[0]+g.m)+' '+f(v[1]+g.m)).join(' L')} Z"/>`,ln=l=>`<line x1="${f(l[0]+g.m)}" y1="${f(l[1]+g.m)}" x2="${f(l[2]+g.m)}" y2="${f(l[3]+g.m)}"/>`;
   const pl=g.lines.filter(l=>l[4]==='PIECES'),cl=g.lines.filter(l=>l[4]!=='PIECES');
   return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${f(g.W)}mm" height="${f(g.H)}mm" viewBox="0 0 ${f(g.W)} ${f(g.H)}">\n`+
+  (g.engr.length?`<g id="ENGRAVE" fill="#00ff00" stroke="none">\n${g.engr.map(pa).join('\n')}\n</g>\n`:'')+
   (pl.length?`<g id="PIECES" fill="none" stroke="#0000ff" stroke-width="0.1">\n${pl.map(ln).join('\n')}\n</g>\n`:'')+
   `<g id="CUT" fill="none" stroke="#ff0000" stroke-width="0.1">\n`+cl.map(ln).join('\n')+(cl.length?'\n':'')+
   g.polys.filter(p=>p.L!=='BASE').map(pa).join('\n')+'\n</g>\n'+
@@ -377,6 +405,7 @@ async function save(name,data,msgEl){
   catch(e){$(msgEl).textContent=e?.code==='declined'?'Download cancelled.':'That download didn\'t go through. Try again, or use Copy.'}}
 for(const k of OPT_KEYS){const el=$('c-'+k);el.value=cut[k];el.addEventListener('input',()=>{cut[k]=k==='mode'?el.value:(+el.value||0);store.cut=cut;persist();render()})}
 $('dlzip').onclick=()=>{const g=geometry(),n=fname();save(n+'-laser.zip',zip([[n+'.dxf',toDXF(g)],[n+'.svg',toSVG(g)],[n+'.json',JSON.stringify(puz)]]),'c-msg')};
+$('c-chilli').checked=!!cut.chilli;$('c-chilli').onchange=e=>{cut.chilli=e.target.checked;store.cut=cut;persist();render()};
 $('dldxf').onclick=()=>save(fname()+'.dxf',toDXF(geometry()),'c-msg');
 $('dlsvg').onclick=()=>save(fname()+'.svg',toSVG(geometry()),'c-msg');
 $('cpdxf').onclick=async()=>{try{await navigator.clipboard.writeText(toDXF(geometry()));$('c-msg').textContent='DXF copied. Paste it into a text file ending .dxf.'}catch(e){$('c-msg').textContent='Copying was blocked here.'}};
@@ -393,7 +422,7 @@ function setMode(m){mode=m;for(const k of['design','play','cut'])$('tab-'+k).set
 for(const k of['design','play','cut'])$('tab-'+k).onclick=()=>{if(k!=='design'&&!puz)return;setMode(k)};
 function home(){
   fetch('puzzles/index.json',{cache:'no-cache'}).then(r=>{if(!r.ok)throw 0;return r.json()}).then(list=>{
-    $('sets').innerHTML=list.length?list.map(s=>`<a class="set" href="?set=${encodeURIComponent(s.id)}">${miniSVG(s.w,s.h,s.mask,[],false)}<b>${esc(s.name)}</b><span>${s.pieces} pieces${s.tray+s.shape?` · ${s.tray+s.shape} challenges`:''}</span></a>`).join(''):'<p class="note">No puzzles yet.</p>'})
+    $('sets').innerHTML=list.length?list.map(s=>`<a class="set" href="?set=${encodeURIComponent(s.id)}">${miniSVG(s.w,s.h,s.mask,[],false)}<b>${esc(s.name)}</b>${s.level?chillies(s.level,16):''}<span>${s.pieces} pieces${s.tray+s.shape?` · ${s.tray+s.shape} challenges`:''}</span></a>`).join(''):'<p class="note">No puzzles yet.</p>'})
   .catch(()=>{$('sets').innerHTML='<p class="note">The puzzle list couldn\'t load. Try again in a moment.</p>'})}
 function player(){
   setMode('play');const id=Q.get('set');

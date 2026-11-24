@@ -57,6 +57,26 @@ function partition(w,h,mask,n,mn,mx,rnd){
   if(size.some(s=>s<mn))return null;
   return mem.map(m=>m.map(i=>[i%w,(i/w)|0]))}
 function randomPoly(size){const S=new Set(['0,0']),c=[[0,0]];while(c.length<size){const[x,y]=c[(Math.random()*c.length)|0],d=[[1,0],[-1,0],[0,1],[0,-1]][(Math.random()*4)|0],k=(x+d[0])+','+(y+d[1]);if(!S.has(k)){S.add(k);c.push([x+d[0],y+d[1]])}}return norm(c)}
+/* Difficulty as a person feels it: always work on the empty square with the fewest ways to fill it,
+   and count the moves (including dead ends) needed to find the answer. Averaged over several runs. */
+function humanEffort(w,h,mask,pieces,flip,runs){
+  const cls=classesOf(pieces,flip),N=w*h;let tot=0;
+  for(let r=0;r<runs;r++){
+    const board=new Int8Array(N);for(let i=0;i<N;i++)board[i]=mask[i]?0:-1;
+    const rem=cls.map(c=>c.count),order=cls.map((_,k)=>k).sort(()=>Math.random()-.5);let nodes=0,done=false;
+    const placesFor=(i,cap)=>{const x=i%w,y=(i/w)|0,out=[];
+      for(const k of order){if(!rem[k])continue;for(const o of cls[k].orients)for(const[ax,ay]of o){const dx=x-ax,dy=y-ay;let ok=true;
+        for(const[cx,cy]of o){const nx=cx+dx,ny=cy+dy;if(nx<0||ny<0||nx>=w||ny>=h||board[ny*w+nx]!==0){ok=false;break}}
+        if(ok){out.push([k,o.map(([cx,cy])=>(cy+dy)*w+cx+dx)]);if(out.length>cap)return null}}}return out};
+    const rec=()=>{if(done||nodes>20000)return;nodes++;
+      let best=null;for(let i=0;i<N;i++)if(board[i]===0){const p=placesFor(i,best?best.length-1:1e9);if(p&&(!best||p.length<best.length)){best=p;if(p.length<=1)break}}
+      if(!best){done=true;return}
+      if(!best.length)return;
+      best.sort(()=>Math.random()-.5);
+      for(const[k,cells]of best){for(const c of cells)board[c]=1;rem[k]--;rec();if(done)return;rem[k]++;for(const c of cells)board[c]=0}};
+    rec();tot+=nodes}
+  return tot/runs}
+function levelOf(effort){return effort<15?1:effort<60?2:effort<200?3:effort<700?4:5}
 function tryOne(o,syms){
   let parts;
   if(o.many&&o.min===o.max){const area=o.mask.filter(Boolean).length;if(area!==o.n*o.min)return null;
@@ -69,14 +89,15 @@ function tryOne(o,syms){
   if(o.distinct&&new Set(parts.map(p=>shapeKey(p,o.flip))).size<parts.length)return null;
   const cl=classesOf(parts,o.flip);
   if(o.many){const r=enumSols(o.w,o.h,o.mask,cl,syms,60,o.limit);if(r.sols.length<20)return null;return {pieces:parts,nodes:r.nodes,count:r.sols.length}}
-  const r=solve(o.w,o.h,o.mask,cl,syms,o.limit);if(r.aborted||r.count!==1)return null;return {pieces:parts,nodes:r.nodes,count:1}}
-function pickCand(c,o){if(o.many)return c.reduce((a,b)=>b.count>a.count?b:a);c.sort((a,b)=>a.nodes-b.nodes);return o.diff==='gentle'?c[0]:o.diff==='hard'?c[c.length-1]:c[(c.length/2)|0]}
+  const r=solve(o.w,o.h,o.mask,cl,syms,o.limit);if(r.aborted||r.count!==1)return null;
+  const human=humanEffort(o.w,o.h,o.mask,parts,o.flip,6);return {pieces:parts,nodes:r.nodes,count:1,human,level:levelOf(human)}}
+function pickCand(c,o){if(o.many)return c.reduce((a,b)=>b.count>a.count?b:a);c.sort((a,b)=>a.human-b.human);return o.diff==='gentle'?c[0]:o.diff==='hard'?c[c.length-1]:c[(c.length/2)|0]}
 function generate(o,tick){
   const syms=traySyms(o.w,o.h,o.mask),t0=Date.now(),cands=[];let tries=0;
   while(Date.now()-t0<o.time&&cands.length<o.want){tries++;if(tick&&tries%100===0)tick(tries,cands.length);
     const c=tryOne(o,syms);if(c){cands.push(c);if(tick)tick(tries,cands.length)}}
   if(!cands.length)return {tries,found:0};
-  const p=pickCand(cands,o);return {tries,found:cands.length,pieces:p.pieces,nodes:p.nodes,count:p.count}}
+  const p=pickCand(cands,o);return {tries,found:cands.length,pieces:p.pieces,nodes:p.nodes,count:p.count,human:p.human,level:p.level}}
 /* Challenge sets: starter pieces in the tray, and shapes to build on the table. */
 function perimeter(S){let p=0;for(const k of S){const[x,y]=k.split(',').map(Number);if(!S.has((x+1)+','+y))p++;if(!S.has((x-1)+','+y))p++;if(!S.has(x+','+(y+1)))p++;if(!S.has(x+','+(y-1)))p++}return p}
 function blob(ids,pieces,flip){
