@@ -2,13 +2,21 @@
 <html lang="en-GB" data-mode="home">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Wooden Packing Puzzles</title>
 <meta name="description" content="Play wooden packing puzzles and their challenges, with hints and solutions.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="app.css">
-<script>{const q=new URLSearchParams(location.search);document.documentElement.dataset.mode=q.has('maker')?'maker':q.get('set')?'player':'home'}</script>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#4a3526">
+<link rel="icon" href="icons/favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Puzzles">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<script>{const q=new URLSearchParams(location.search),d=document.documentElement;d.dataset.mode=q.has('app')?'app':q.has('maker')?'maker':q.get('set')?'player':'home';if(d.dataset.mode==='app')d.dataset.view=location.hash?'play':'home'}</script>
 </head>
 <body>
 <!-- HOME: list of published sets -->
@@ -16,12 +24,36 @@
   <h1>Wooden packing puzzles</h1>
   <p class="lede">Every piece has to fit in the tray. Pick a puzzle to play it here, then try its challenges. Stuck? Hints show one piece at a time.</p>
   <div class="sets" id="sets"><p class="note">Loading puzzles…</p></div>
+  <div class="card getapp">
+    <h2>Get the app</h2>
+    <p>Over 200 puzzles graded by chillies, plus new ones made on your phone. Works offline.</p>
+    <div class="btns"><a class="btn red" href="?app">Open the app</a></div>
+    <p class="note">Then add it to your home screen. On iPhone: tap Share, then Add to Home Screen. On Android: tap the menu, then Install app or Add to Home screen.</p>
+  </div>
   <p class="foot"><a href="?maker">Puzzle maker</a></p>
 </section>
+
+<!-- APP: puzzle library -->
+<section id="apphome" class="apphome">
+  <div class="apphead">
+    <div><h1>Packing Puzzles</h1><p class="lede" id="app-progress">Loading puzzles…</p></div>
+    <button class="btn alt" id="app-install" hidden>Install</button>
+  </div>
+  <p class="note installhint" id="app-hint" hidden>Add this to your home screen to use it like an app. On iPhone: tap Share, then Add to Home Screen. On Android: tap the menu, then Install app.</p>
+  <section class="card">
+    <h2>New puzzle</h2>
+    <p class="note">Made on your phone, never seen before. Pick how hot.</p>
+    <div class="newrow" id="app-new"></div>
+  </section>
+  <div id="app-levels"></div>
+  <div id="app-sets"></div>
+</section>
+
 
 <div class="top">
   <div>
     <p class="crumb player-only"><a href="./">All puzzles</a></p>
+    <p class="crumb app-only"><a href="#" id="app-back">‹ Puzzles</a></p>
     <h1 id="title">Packing Puzzle Maker</h1>
     <p class="lede" id="lede">Design a tray, generate wooden pieces that fit only one way, try it on screen, then export the laser files.</p>
   </div>
@@ -63,7 +95,7 @@
     <section class="card" id="p-play">
       <h2 id="pz-name">Puzzle</h2>
       <div class="stat" id="pz-stat"></div>
-      <p class="note">Drag pieces into the tray. Tap a piece to turn it, or select it and use the buttons. Keys: R rotate, F flip.</p>
+      <p class="note">Drag pieces into the tray. Flick a piece up or down to rotate it, left or right to flip it, or tap it to turn it. Keys: R rotate, F flip.</p>
       <div class="btns">
         <button class="btn" id="rot">Rotate</button>
         <button class="btn" id="flp">Flip</button>
@@ -75,6 +107,7 @@
       </div>
       <p class="msg" id="p-msg" role="status"></p>
       <button class="btn alt" id="back" hidden>Back to the main puzzle</button>
+      <button class="btn red app-only" id="next" hidden>Next puzzle</button>
     </section>
     <section class="card" id="p-chal">
       <h2>Challenges</h2>

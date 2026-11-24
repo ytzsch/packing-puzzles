@@ -40,6 +40,7 @@ const PRESETS=[
   {name:'Five-square set 10×5',w:10,h:5,n:10,min:5,max:5,many:true}];
 const OPT_KEYS=['cell','border','clear','kerf','mode'];
 const SKEY=MODE==='maker'?'packpuz':'packpuz-play';
+if('serviceWorker' in navigator&&location.protocol==='https:'&&MODE!=='maker')navigator.serviceWorker.register('sw.js').catch(()=>{});
 let store={};try{store=JSON.parse(localStorage.getItem(SKEY)||'{}')}catch(e){}
 const persist=()=>{try{localStorage.setItem(SKEY,JSON.stringify(store))}catch(e){}};
 let cut=Object.assign({cell:20,border:12,clear:0.3,kerf:0.15,mode:'inside',chilli:true},store.cut||{});
@@ -133,16 +134,18 @@ svg.addEventListener('pointerdown',e=>{
   const w=toWorld(e);
   if(sel!==p.id){sel=p.id;render()}
   const g2=svg.querySelector(`.pc[data-id="${p.id}"]`);g2.classList.add('drag');
-  drag={p,g:g2,dx:w.x-p.x,dy:w.y-p.y,sx:w.x,sy:w.y,t:Date.now(),moved:false};svg.setPointerCapture(e.pointerId);e.preventDefault()});
+  drag={p,g:g2,dx:w.x-p.x,dy:w.y-p.y,sx:w.x,sy:w.y,lx:w.x,ly:w.y,ox:p.x,oy:p.y,t:Date.now(),moved:false};svg.setPointerCapture(e.pointerId);e.preventDefault()});
 svg.addEventListener('pointermove',e=>{
   if(paint!==null){const el=document.elementFromPoint(e.clientX,e.clientY);const c=el?.dataset?.cell;if(c!=null&&draft.mask[+c]!==paint){draft.mask[+c]=paint;saveDraft();render()}return}
   if(!drag)return;const w=toWorld(e);
   if(Math.hypot(w.x-drag.sx,w.y-drag.sy)>.15)drag.moved=true;
-  drag.p.x=w.x-drag.dx;drag.p.y=w.y-drag.dy;drag.g.setAttribute('transform',`translate(${drag.p.x} ${drag.p.y})`)});
+  drag.lx=w.x;drag.ly=w.y;drag.p.x=w.x-drag.dx;drag.p.y=w.y-drag.dy;drag.g.setAttribute('transform',`translate(${drag.p.x} ${drag.p.y})`)});
 const endDrag=()=>{
   if(paint!==null){paint=null;return}
-  if(!drag)return;const{p,moved,t}=drag;drag=null;
-  if(!moved&&Date.now()-t<400){p.x=Math.round(p.x);p.y=Math.round(p.y);turn(p,'rot');return}
+  if(!drag)return;const{p,moved,t,sx,sy,lx,ly,ox,oy}=drag;drag=null;const dt=Date.now()-t,fx=lx-sx,fy=ly-sy;
+  if(!moved&&dt<400){p.x=Math.round(p.x);p.y=Math.round(p.y);turn(p,'rot');return}
+  // A quick flick turns the piece where it was: left/right flips, down rotates clockwise, up anticlockwise.
+  if(dt<260&&Math.hypot(fx,fy)>.35){p.x=ox;p.y=oy;if(Math.abs(fx)>Math.abs(fy))turn(p,'flip');else turn(p,fy>0?'rot':'rotl');return}
   if(!t0)t0=Date.now();drop(p);render();check()};
 svg.addEventListener('pointerup',endDrag);svg.addEventListener('pointercancel',endDrag);
 function absCells(p){return p.shape.map(([a,b])=>[a+p.x,b+p.y])}
@@ -160,7 +163,7 @@ function turn(p,how){
   if(!p||solved||p.fixed)return;
   const n=p.shape.length;let cx=0,cy=0;for(const[a,b]of p.shape){cx+=a;cy+=b}cx/=n;cy/=n;
   if(how==='flip'&&!puz.flip){$('p-msg').textContent='This set is made so pieces stay face up.';return}
-  const ns=norm(p.shape.map(([a,b])=>how==='rot'?[-b,a]:[-a,b]));
+  const ns=norm(p.shape.map(([a,b])=>how==='rot'?[-b,a]:how==='rotl'?[b,-a]:[-a,b]));
   let nx=0,ny=0;for(const[a,b]of ns){nx+=a;ny+=b}nx/=n;ny/=n;
   p.shape=ns;p.x=Math.round(p.x+cx-nx);p.y=Math.round(p.y+cy-ny);
   if(!t0)t0=Date.now();drop(p);render();check()}
@@ -169,7 +172,9 @@ function check(){
   if(cov===need&&ps.every(p=>p.inTray)){solved=true;sel=null;render();
     const secs=t0?Math.round((Date.now()-t0)/1000):0;const m=Math.floor(secs/60),s=secs%60;
     $('banner').textContent=`Solved in ${m}:${String(s).padStart(2,'0')}${hints?` with ${hints} hint${hints>1?'s':''}`:''}`;$('banner').hidden=false;
-    if(chal){store.done=store.done||{};store.done[puz.created+':'+chal.num]=1;persist();renderChallenges()}}}
+    if(chal){store.done=store.done||{};store.done[puz.created+':'+chal.num]=1;persist();renderChallenges()}
+    if(MODE==='app'&&!chal){if(puz.packNum){store.done=store.done||{};store.done['pack-'+puz.packNum]=1;persist()}
+      if(puz.packNum||puz.fresh){$('next').textContent=puz.fresh?'Another one':'Next puzzle';$('next').hidden=false}}}}
 /* Hints work from wherever you are: the solver finishes the tray from your current pieces. */
 function completeFrom(placed){
   const pre=[];for(const p of placed)for(const[a,b]of absCells(p))pre.push(b*G.w+a);
@@ -225,7 +230,8 @@ function runJob(o,msgEl,done){
     stopAll();done(m)};
   let alive=false;
   const fallback=()=>{if(worker){try{worker.terminate()}catch(e){}worker=null}if(!running)return;
-    if(o.job==='challenges')setTimeout(()=>{if(running)onMsg({done:true,...makeChallenges(o)})},30);else sliced(o,onMsg)};
+    if(o.job==='challenges')setTimeout(()=>{if(running)onMsg({done:true,...makeChallenges(o)})},30);
+    else if(o.job==='level')setTimeout(()=>{if(running)onMsg({done:true,...generateLevel(o.level,8000)})},30);else sliced(o,onMsg)};
   try{worker=new Worker(workerURL);worker.onmessage=e=>{alive=true;onMsg(e.data)};worker.onerror=e=>{e.preventDefault?.();fallback()};worker.postMessage(o);setTimeout(()=>{if(!alive&&worker)fallback()},1500)}
   catch(e){worker=null;fallback()}}
 function sliced(o,onMsg){
@@ -432,8 +438,55 @@ function player(){
     $('lede').textContent=p.many?'Fill the tray with all the pieces: there are lots of ways. Then try the challenges, each with one answer.':'Fit every piece into the tray. There is only one way.';
     const c=Q.get('c'),ch=c&&p.challenges.find(x=>x.num===c);if(ch)openGame(ch)})
   .catch(()=>{$('title').textContent='Puzzle not found';$('lede').innerHTML='That puzzle isn\'t here. <a href="./">See all puzzles</a>.';svg.innerHTML=''})}
+/* ---------- App: library of graded puzzles, new puzzles made on the phone, published sets ---------- */
+let PACK=null,SETS=null,installEvt=null;
+const root=document.documentElement;
+function loadPack(){if(PACK)return Promise.resolve(PACK);
+  return Promise.all([1,2,3,4,5].map(l=>fetch('pack/level-'+l+'.json').then(r=>r.ok?r.json():[]).catch(()=>[]))).then(levels=>{
+    PACK=[];levels.forEach(list=>list.forEach(p=>{const num=PACK.length+1;PACK.push(Object.assign({},p,{packNum:num,name:'Puzzle '+num,id:'pack-'+num,created:'pack-'+num,challenges:[]}))}));return PACK})}
+function loadSets(){if(SETS)return Promise.resolve(SETS);return fetch('puzzles/index.json').then(r=>r.ok?r.json():[]).catch(()=>[]).then(l=>SETS=l)}
+function appHome(){
+  root.dataset.view='home';document.title='Packing Puzzles';stopAll();
+  const done=store.done||{};
+  $('app-new').innerHTML=[1,2,3,4,5].map(l=>`<button type="button" data-l="${l}" aria-label="New ${l}-chilli puzzle"><span class="chillies">${Array.from({length:l},()=>`<svg viewBox="-.03 -.03 1.06 1.06" width="13" height="13" aria-hidden="true"><path d="${chilliD(0,0,1)}" fill="#d4231b"/></svg>`).join('')}</span><span>${['Mild','Warm','Hot','Very hot','Fiery'][l-1]}</span></button>`).join('');
+  loadPack().then(pack=>{
+    const solved=pack.filter(p=>done['pack-'+p.packNum]).length;
+    $('app-progress').textContent=pack.length?`${solved} of ${pack.length} puzzles solved`:'The puzzles couldn\'t load. Check your connection and try again.';
+    $('app-levels').innerHTML=[1,2,3,4,5].map(l=>{const L=pack.filter(p=>p.level===l);if(!L.length)return '';
+      return `<section class="lvl"><h2>${chillies(l,20)}<span>${L.filter(p=>done['pack-'+p.packNum]).length} of ${L.length}</span></h2><div class="tiles">${L.map(p=>`<a class="tile${done['pack-'+p.packNum]?' done':''}" href="#p${p.packNum}" aria-label="Puzzle ${p.packNum}${done['pack-'+p.packNum]?', solved':''}">${p.packNum}</a>`).join('')}</div></section>`}).join('')});
+  loadSets().then(list=>{list=list.filter(s=>s.tray+s.shape>0);
+    $('app-sets').innerHTML=list.length?`<section class="lvl"><h2>Challenge sets</h2><div class="sets">${list.map(s=>`<a class="set" href="#set-${encodeURIComponent(s.id)}">${miniSVG(s.w,s.h,s.mask,[],false)}<b>${esc(s.name)}</b>${s.level?chillies(s.level,16):''}<span>${s.pieces} pieces · ${s.tray+s.shape} challenges</span></a>`).join('')}</div></section>`:''})}
+function appPlay(title,lede){root.dataset.view='play';$('next').hidden=true;$('title').textContent=title;$('lede').innerHTML=lede||'';document.title=title+' · Packing Puzzles';window.scrollTo(0,0)}
+function appRoute(){
+  const h=decodeURIComponent(location.hash.slice(1));
+  if(!h)return appHome();
+  let m;
+  if(m=h.match(/^p(\d+)$/)){appPlay('Puzzle '+m[1],'');puz=null;render();
+    loadPack().then(pack=>{const p=pack[+m[1]-1];if(!p){location.hash='';return}
+      loadPuzzle(Object.assign({},p));$('lede').innerHTML=chillies(p.level,20)+' Fit every piece into the tray. There is only one way.';$('p-chal').hidden=true})}
+  else if(m=h.match(/^new([1-5])$/)){const l=+m[1];appPlay('New puzzle',chillies(l,20)+' Being made on your phone…');puz=null;render();$('p-chal').hidden=true;
+    runJob({job:'level',level:l,time:25000},'p-msg',r=>{if(!r.found){$('p-msg').textContent='Couldn\'t make one this time. Try again.';return}
+      const p={v:2,name:'New puzzle',w:r.w,h:r.h,mask:r.mask,flip:true,many:false,count:1,pieces:r.pieces,nodes:r.nodes,human:r.human,level:r.level,challenges:[],created:'new-'+Date.now(),fresh:l};
+      loadPuzzle(p);$('p-msg').textContent='';$('p-chal').hidden=true;$('lede').innerHTML=chillies(r.level,20)+' Fit every piece into the tray. There is only one way.'})}
+  else if(h.startsWith('set-')){const id=h.slice(4);appPlay('Loading…','');puz=null;render();
+    fetch('puzzles/'+encodeURIComponent(id)+'.json').then(r=>{if(!r.ok)throw 0;return r.json()}).then(p=>{p.id=p.id||id;p.challenges=p.challenges||[];p.created=p.created||id;loadPuzzle(p);$('p-chal').hidden=false;
+      $('title').textContent=p.name;$('lede').textContent=p.many?'Fill the tray with all the pieces, then try the challenges below.':'Fit every piece into the tray.'})
+    .catch(()=>{$('title').textContent='Not available offline';$('lede').textContent='Open this set once while online to keep it on your phone.'})}
+  else location.hash=''}
+function app(){
+  setMode('play');
+  $('app-new').onclick=e=>{const b=e.target.closest('button');if(b)location.hash='new'+b.dataset.l};
+  $('app-back').onclick=e=>{e.preventDefault();location.hash=''};
+  $('next').onclick=()=>{if(puz?.fresh){const h='new'+puz.fresh;if(location.hash==='#'+h)appRoute();else location.hash=h;return}
+    const done=store.done||{},n=puz?.packNum||0;const nx=PACK&&(PACK.find(p=>p.packNum>n&&!done['pack-'+p.packNum])||PACK.find(p=>!done['pack-'+p.packNum]));location.hash=nx?'p'+nx.packNum:''};
+  const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+  if(!standalone)$('app-hint').hidden=false;
+  addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=e;$('app-install').hidden=false;$('app-hint').hidden=true});
+  $('app-install').onclick=async()=>{if(!installEvt)return;installEvt.prompt();try{await installEvt.userChoice}catch(e){}installEvt=null;$('app-install').hidden=true};
+  addEventListener('hashchange',appRoute);appRoute()}
 if(MODE==='home')home();
 else if(MODE==='player')player();
+else if(MODE==='app')app();
 else{setMode('play');
 if(puz)loadPuzzle(puz);
 else{const d0=Object.assign({},draft,{w:6,h:5,n:6,min:4,max:6,mask:new Array(30).fill(1),diff:'medium',many:false});runJob(genOpts(d0),'p-msg',m=>{if(!m.found){$('p-msg').textContent='Open Design to make a puzzle.';return}const p=makePuz(d0,m);loadPuzzle(p);$('p-msg').textContent=''})}

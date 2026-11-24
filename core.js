@@ -154,6 +154,23 @@ function makeChallenges(o,tick){
   const grade=(list,pre)=>{list.sort((a,b)=>a.nodes-b.nodes);list.forEach((c,i)=>{c.level=LV[Math.min(3,Math.floor(i*4/list.length))];c.num=pre+(i+1)})};
   grade(tray,'T');grade(shapes,'S');
   return {challenges:tray.concat(shapes),trayNote,found:tray.length+shapes.length}}
+/* Generate a single-solution puzzle at a target chilli level (1-5). Tray sizes are picked to suit each level. */
+const LEVEL_TRAYS={
+  1:[{w:4,h:4,n:4,min:3,max:5},{w:5,h:4,n:5,min:3,max:5},{w:5,h:4,n:4,min:4,max:6}],
+  2:[{w:5,h:5,n:5,min:4,max:6},{w:6,h:4,n:5,min:4,max:6},{w:6,h:5,n:6,min:4,max:6}],
+  3:[{w:6,h:5,n:6,min:4,max:6},{w:6,h:6,n:7,min:4,max:6},{w:7,h:5,n:7,min:4,max:6}],
+  4:[{w:6,h:6,n:7,min:4,max:6},{w:7,h:6,n:8,min:4,max:6},{w:8,h:5,n:8,min:4,max:6}],
+  5:[{w:8,h:6,n:8,min:5,max:7},{w:7,h:7,n:9,min:4,max:7},{w:8,h:6,n:9,min:4,max:7}]};
+function generateLevel(target,time,tick){
+  const t0=Date.now(),cfgs=LEVEL_TRAYS[target]||LEVEL_TRAYS[3];let best=null,tries=0;
+  while(Date.now()-t0<time){
+    const c=cfgs[(Math.random()*cfgs.length)|0],o=Object.assign({mask:new Array(c.w*c.h).fill(1),flip:true,distinct:true,noRect:true,limit:c.w*c.h>40?3e6:1.5e6},c);
+    const syms=traySyms(o.w,o.h,o.mask);
+    for(let k=0;k<20&&Date.now()-t0<time;k++){tries++;if(tick&&tries%50===0)tick(tries,best?1:0);
+      const r=tryOne(o,syms);if(!r)continue;
+      if(r.level===target)return Object.assign(r,{w:o.w,h:o.h,mask:o.mask,flip:true,tries,found:1});
+      if(!best||Math.abs(r.level-target)<Math.abs(best.level-target))best=Object.assign(r,{w:o.w,h:o.h,mask:o.mask,flip:true})}}
+  return best?Object.assign(best,{tries,found:1}):{tries,found:0}}
 function rating(nodes){return Math.max(1,Math.min(5,1+Math.floor(Math.log10(Math.max(nodes,10))-1.5)))}
 /* Outline loops of a set of cells, clockwise on screen (shape on the right). */
 function loops(cells){

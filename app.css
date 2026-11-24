@@ -71,3 +71,22 @@ input[type=text]{font:inherit;font-size:16px;color:var(--ink);background:var(--b
 .qrbox{width:132px;background:#fff;padding:8px;border-radius:8px;border:1px solid var(--line)}.qrbox svg{display:block;width:100%;height:auto}
 .qrbox:empty{display:none}
 .chillies{display:inline-flex;gap:2px;vertical-align:-3px;color:var(--muted)}.chillies svg{display:block}
+/* App mode: library (view=home) and play (view=play). */
+.app-only{display:none}[data-mode=app] .app-only{display:block}[data-mode=app] button.app-only:not([hidden]){display:block}
+[data-mode=app] .maker-only{display:none!important}
+.apphome{display:none;max-width:1280px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) max(4vw,16px) 48px}
+[data-mode=app][data-view=home] .apphome{display:grid;gap:18px}
+[data-mode=app][data-view=home] .top,[data-mode=app][data-view=home] main,[data-mode=app] .home{display:none}
+[data-mode=app] .top{padding-top:max(12px,env(safe-area-inset-top))}
+.apphead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.apphome h1{font-size:clamp(30px,6vw,44px)}
+.newrow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.newrow button{display:grid;justify-items:center;gap:4px;padding:10px 4px;min-height:56px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;cursor:pointer;font:600 14px Barlow,sans-serif}
+.newrow .chillies{gap:0}
+.lvl h2{display:flex;align-items:center;gap:10px;font:700 20px "Barlow Semi Condensed",sans-serif;margin:6px 0 8px}
+.lvl h2 span{font:500 15px Barlow,sans-serif;color:var(--muted)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:8px}
+.tile{display:grid;place-items:center;min-height:52px;border-radius:10px;background:var(--panel);border:1px solid var(--line);color:var(--ink);text-decoration:none;font:600 16px Barlow,sans-serif}
+.tile.done{background:var(--tray);border-color:var(--tray);color:#f3e2c7}
+.getapp{margin-top:24px;max-width:560px}.getapp p{margin:0}.getapp .btn{text-decoration:none;text-align:center}
+#app-sets .sets{margin-top:8px}

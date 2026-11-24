@@ -6,6 +6,7 @@ Site: https://ytzsch.github.io/packing-puzzles/
 
 - **Home page** lists every puzzle in `puzzles/`.
 - **Player**: `?set=<id>` opens one puzzle with its challenges, hints and solutions. Add `&c=T5` to open a challenge. This is what the QR codes point to.
+- **App**: `?app` is the installable puzzle app (add to home screen): 200 puzzles graded by chillies in `pack/`, new puzzles made on the phone at a chosen level, and the challenge sets. Works offline (`sw.js`, `manifest.webmanifest`).
 - **Maker**: `?maker` designs trays, generates pieces (one solution, or many for a challenge set), makes graded challenges, prints the booklet and exports DXF/SVG for the laser.
 
 ## Adding a puzzle
@@ -22,4 +23,5 @@ Keep a puzzle's name once its booklet or box is printed: the name makes the web 
 - `core.js`: shapes, the exact solver, the generators and challenge maker; `worker.js` runs them in the background
 - `qrcode.js`: QR code generator (Kazuhiko Arase, MIT licence)
 - `tools/build-index.js`: builds `puzzles/index.json` on each deploy
+- `tools/make-pack.js`: makes the app's puzzle pack, one chilli level at a time: `node tools/make-pack.js <level> <count> <minutes>`
 - `.github/workflows/pages.yml`: deploys to GitHub Pages on every push to main
