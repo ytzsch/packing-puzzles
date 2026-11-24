@@ -21,7 +21,7 @@ const OPT_KEYS=['cell','border','clear','kerf','mode'];
 const SKEY=MODE==='maker'?'packpuz':'packpuz-play';
 let store={};try{store=JSON.parse(localStorage.getItem(SKEY)||'{}')}catch(e){}
 const persist=()=>{try{localStorage.setItem(SKEY,JSON.stringify(store))}catch(e){}};
-let cut=Object.assign({cell:20,border:12,clear:0.3,kerf:0.15,mode:'shared'},store.cut||{});
+let cut=Object.assign({cell:20,border:12,clear:0.3,kerf:0.15,mode:'inside'},store.cut||{});
 let draft=Object.assign({w:6,h:5,n:6,min:4,max:6,flip:true,distinct:true,noRect:true,diff:'medium',many:false,mask:null},store.draft||{});
 if(!draft.mask||draft.mask.length!==draft.w*draft.h)draft.mask=new Array(draft.w*draft.h).fill(1);
 let puz=MODE==='maker'?store.puzzle||null:null,mode='play',ps=[],sel=null,G=null,chal=null,cls=[],hints=0,t0=null,solved=false,worker=null,running=false;
@@ -296,54 +296,64 @@ $('pub-dl').onclick=()=>{if(!puz)return;const id=slug(puz.name);puz.id=id;store.
 
 /* ---------- Cut geometry ---------- */
 function geometry(){
-  const C=+cut.cell,B=+cut.border,cl=+cut.clear,kf=+cut.kerf,{w,h,mask}=puz,gap=6;
+  const C=+cut.cell,B=+cut.border,kf=+cut.kerf,inside=cut.mode==='inside',cl=inside?0:+cut.clear,{w,h,mask}=puz,gap=6;
   const cells=[];for(let i=0;i<w*h;i++)if(mask[i])cells.push([i%w,(i/w)|0]);
   let bx0=Infinity,by0=Infinity,bx1=-Infinity,by1=-Infinity;for(const[x,y]of cells){bx0=Math.min(bx0,x);by0=Math.min(by0,y);bx1=Math.max(bx1,x+1);by1=Math.max(by1,y+1)}
   const fw=(bx1-bx0)*C+2*(B+cl),fh=(by1-by0)*C+2*(B+cl);
   const polys=[],lines=[];
   const rect=(x,y,W,H,o)=>[[x-o,y-o],[x+W+o,y-o],[x+W+o,y+H+o],[x-o,y+H+o]];
-  // frame: outer + window; base beside it
-  polys.push(rect(0,0,fw,fh,kf/2));
+  // Inner shapes first: window, then the frame's outside, then the base beside it.
+  // Inside mode: the window line sits on the tray outline and is also the pieces' outer edge.
   for(const L of loops(cells))polys.push(offsetLoop(L,(cl-kf/2)/C).map(([x,y])=>[(x-bx0)*C+B+cl,(y-by0)*C+B+cl]));
+  polys.push(rect(0,0,fw,fh,kf/2));
   polys.push(rect(fw+gap,0,fw,fh,kf/2));
   let W=2*fw+gap,H=fh;const py0=fh+gap;
-  if(cut.mode==='shared'){
+  if(inside||cut.mode==='shared'){
     const pid=new Int16Array(w*h).fill(-1);puz.pieces.forEach((c,j)=>c.forEach(([x,y])=>pid[y*w+x]=j));
-    const at=(x,y)=>x<0||y<0||x>=w||y>=h?-1:pid[y*w+x];const ox=-bx0*C,oy=py0-by0*C;
-    for(let y=0;y<=h;y++){let run=null;for(let x=0;x<=w;x++){const cutHere=x<w&&at(x,y-1)!==at(x,y);
-      if(cutHere&&run===null)run=x;if(!cutHere&&run!==null){lines.push([ox+run*C,oy+y*C,ox+x*C,oy+y*C]);run=null}}}
-    for(let x=0;x<=w;x++){let run=null;for(let y=0;y<=h;y++){const cutHere=y<h&&at(x-1,y)!==at(x,y);
-      if(cutHere&&run===null)run=y;if(!cutHere&&run!==null){lines.push([ox+x*C,oy+run*C,ox+x*C,oy+y*C]);run=null}}}
-    H=py0+(by1-by0)*C}
+    const at=(x,y)=>x<0||y<0||x>=w||y>=h?-1:pid[y*w+x];
+    const ox=inside?B-bx0*C:-bx0*C,oy=inside?B-by0*C:py0-by0*C,layer=inside?'PIECES':'CUT';
+    const isCut=(a,b)=>a!==b&&(!inside||(a!==-1&&b!==-1));
+    for(let y=0;y<=h;y++){let run=null;for(let x=0;x<=w;x++){const c=x<w&&isCut(at(x,y-1),at(x,y));
+      if(c&&run===null)run=x;if(!c&&run!==null){lines.push([ox+run*C,oy+y*C,ox+x*C,oy+y*C,layer]);run=null}}}
+    for(let x=0;x<=w;x++){let run=null;for(let y=0;y<=h;y++){const c=y<h&&isCut(at(x-1,y),at(x,y));
+      if(c&&run===null)run=y;if(!c&&run!==null){lines.push([ox+x*C,oy+run*C,ox+x*C,oy+y*C,layer]);run=null}}}
+    if(!inside)H=py0+(by1-by0)*C}
   else{let x=0,y=py0,rowH=0;const maxW=W;
     for(const c of puz.pieces){const n=norm(c);let bw=0,bh=0;for(const[a,b]of n){bw=Math.max(bw,a+1);bh=Math.max(bh,b+1)}
       const pw=bw*C+kf,ph=bh*C+kf;if(x+pw>maxW&&x>0){x=0;y+=rowH+gap;rowH=0}
       for(const L of loops(n))polys.push(offsetLoop(L,kf/2/C).map(([a,b])=>[x+kf/2+a*C,y+kf/2+b*C]));
       x+=pw+gap;rowH=Math.max(rowH,ph)}
     H=y+rowH}
-  const m=kf;return{polys,lines,W:W+2*m,H:H+2*m,m,fw,fh}}
+  const m=kf;return{polys,lines,W:W+2*m,H:H+2*m,m,fw,fh,inside}}
+const BLUE='#1f5fd6';
 function renderCut(){
   if(!puz){svg.innerHTML='';return}
-  const g=geometry(),pad=4;
+  const g=geometry(),pad=4;$('c-clear').disabled=g.inside;
   svg.setAttribute('viewBox',`${-pad} ${-pad} ${g.W+2*pad} ${g.H+2*pad}`);
-  const sw=Math.max(g.W,g.H)/500;
+  const sw=Math.max(g.W,g.H)/450;
   let s=`<rect x="${-pad/2}" y="${-pad/2}" width="${g.W+pad}" height="${g.H+pad}" fill="var(--slot)" rx="2"/>`;
   s+=g.polys.map(p=>`<path d="M${p.map(v=>(v[0]+g.m).toFixed(2)+' '+(v[1]+g.m).toFixed(2)).join('L')}Z" fill="none" stroke="var(--laser)" stroke-width="${sw}"/>`).join('');
-  s+=g.lines.map(l=>`<line x1="${l[0]+g.m}" y1="${l[1]+g.m}" x2="${l[2]+g.m}" y2="${l[3]+g.m}" stroke="var(--laser)" stroke-width="${sw}"/>`).join('');
+  s+=g.lines.map(l=>`<line x1="${l[0]+g.m}" y1="${l[1]+g.m}" x2="${l[2]+g.m}" y2="${l[3]+g.m}" stroke="${l[4]==='PIECES'?BLUE:'var(--laser)'}" stroke-width="${sw*(l[4]==='PIECES'?1.4:1)}"/>`).join('');
   const fs=Math.max(g.W,g.H)/45;
-  s+=`<text x="${g.m+g.fw/2}" y="${g.m+g.fh/2}" font-size="${fs}" text-anchor="middle" fill="var(--muted)" font-family="Barlow">Frame</text><text x="${g.m+g.fw*1.5+6}" y="${g.m+g.fh/2}" font-size="${fs}" text-anchor="middle" fill="var(--muted)" font-family="Barlow">Base</text>`;
+  s+=`<text x="${g.m+g.fw/2}" y="${g.m+fs*1.2}" font-size="${fs}" text-anchor="middle" fill="var(--muted)" font-family="Barlow">Frame${g.inside?' + pieces':''}</text><text x="${g.m+g.fw*1.5+6}" y="${g.m+g.fh/2}" font-size="${fs}" text-anchor="middle" fill="var(--muted)" font-family="Barlow">Base</text>`;
   svg.innerHTML=s;
-  $('c-stat').innerHTML=`<span>Sheet needed <b class="dims">${g.W.toFixed(0)} × ${g.H.toFixed(0)} mm</b></span><span>Frame and base <b class="dims">${g.fw.toFixed(1)} × ${g.fh.toFixed(1)} mm</b></span>`}
+  $('c-stat').innerHTML=`<span>Sheet needed <b class="dims">${g.W.toFixed(0)} × ${g.H.toFixed(0)} mm</b></span><span>Frame and base <b class="dims">${g.fw.toFixed(1)} × ${g.fh.toFixed(1)} mm</b></span>`+
+    (g.inside?`<span>Cut <b style="color:${BLUE}">blue</b> first (lines between pieces, layer PIECES), then <b style="color:var(--laser)">red</b> (window, frame, base, layer CUT). Fit comes from the kerf: about ${(+cut.kerf).toFixed(2)} mm play on each outside edge.</span>`:'')}
 function toDXF(g){
-  const f=v=>(+v).toFixed(3),Y=y=>f(g.H-(y+g.m)),X=x=>f(x+g.m);
-  let s='0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n70\n4\n0\nENDSEC\n0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n70\n1\n0\nLAYER\n2\nCUT\n70\n0\n62\n1\n6\nCONTINUOUS\n0\nENDTAB\n0\nENDSEC\n0\nSECTION\n2\nENTITIES\n';
-  for(const l of g.lines)s+=`0\nLINE\n8\nCUT\n62\n1\n10\n${X(l[0])}\n20\n${Y(l[1])}\n30\n0\n11\n${X(l[2])}\n21\n${Y(l[3])}\n31\n0\n`;
+  const f=v=>(+v).toFixed(3),Y=y=>f(g.H-(y+g.m)),X=x=>f(x+g.m),ACI={CUT:1,PIECES:5};
+  let s='0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n70\n4\n0\nENDSEC\n0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n70\n2\n';
+  for(const n of g.inside?['PIECES','CUT']:['CUT'])s+=`0\nLAYER\n2\n${n}\n70\n0\n62\n${ACI[n]}\n6\nCONTINUOUS\n`;
+  s+='0\nENDTAB\n0\nENDSEC\n0\nSECTION\n2\nENTITIES\n';
+  // Written in cutting order: lines between pieces, then the window, frame outside and base.
+  for(const l of g.lines){const L=l[4]||'CUT';s+=`0\nLINE\n8\n${L}\n62\n${ACI[L]}\n10\n${X(l[0])}\n20\n${Y(l[1])}\n30\n0\n11\n${X(l[2])}\n21\n${Y(l[3])}\n31\n0\n`}
   for(const p of g.polys){s+='0\nPOLYLINE\n8\nCUT\n62\n1\n66\n1\n10\n0\n20\n0\n30\n0\n70\n1\n';for(const v of p)s+=`0\nVERTEX\n8\nCUT\n10\n${X(v[0])}\n20\n${Y(v[1])}\n30\n0\n`;s+='0\nSEQEND\n8\nCUT\n'}
   return s+'0\nENDSEC\n0\nEOF\n'}
-function toSVG(g){const f=v=>(+v).toFixed(3);
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${f(g.W)}mm" height="${f(g.H)}mm" viewBox="0 0 ${f(g.W)} ${f(g.H)}">\n<g fill="none" stroke="#ff0000" stroke-width="0.1">\n`+
-  g.polys.map(p=>`<path d="M${p.map(v=>f(v[0]+g.m)+' '+f(v[1]+g.m)).join(' L')} Z"/>`).join('\n')+'\n'+
-  g.lines.map(l=>`<line x1="${f(l[0]+g.m)}" y1="${f(l[1]+g.m)}" x2="${f(l[2]+g.m)}" y2="${f(l[3]+g.m)}"/>`).join('\n')+'\n</g>\n</svg>\n'}
+function toSVG(g){const f=v=>(+v).toFixed(3),ln=l=>`<line x1="${f(l[0]+g.m)}" y1="${f(l[1]+g.m)}" x2="${f(l[2]+g.m)}" y2="${f(l[3]+g.m)}"/>`;
+  const pl=g.lines.filter(l=>l[4]==='PIECES'),cl=g.lines.filter(l=>l[4]!=='PIECES');
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${f(g.W)}mm" height="${f(g.H)}mm" viewBox="0 0 ${f(g.W)} ${f(g.H)}">\n`+
+  (pl.length?`<g id="PIECES" fill="none" stroke="#0000ff" stroke-width="0.1">\n${pl.map(ln).join('\n')}\n</g>\n`:'')+
+  `<g id="CUT" fill="none" stroke="#ff0000" stroke-width="0.1">\n`+cl.map(ln).join('\n')+(cl.length?'\n':'')+
+  g.polys.map(p=>`<path d="M${p.map(v=>f(v[0]+g.m)+' '+f(v[1]+g.m)).join(' L')} Z"/>`).join('\n')+'\n</g>\n</svg>\n'}
 /* Minimal ZIP (stored, no compression) */
 const CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
 const crc32=b=>{let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRC[(c^b[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0};

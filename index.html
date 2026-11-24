@@ -124,9 +124,9 @@
         <label>Clearance (mm, each side)<input type="number" id="c-clear" min="0" max="3" step="0.05"></label>
         <label>Kerf (mm)<input type="number" id="c-kerf" min="0" max="1" step="0.01"></label>
       </div>
-      <label>Pieces<select id="c-mode"><option value="shared">Cut as one block (shared lines, no waste)</option><option value="separate">Cut separately (for Laser Nest)</option></select></label>
+      <label>Pieces<select id="c-mode"><option value="inside">Inside the frame's window (least wood)</option><option value="shared">As one block below the frame (uses clearance)</option><option value="separate">Cut separately (for Laser Nest)</option></select></label>
       <div class="stat" id="c-stat"></div>
-      <p class="note">Cut everything from the same thickness as the frame. Glue the frame to the base. Shared-line pieces lose half a kerf each side, which gives an easy fit; separate pieces are kerf-corrected to true size. All lines are on layer CUT in red.</p>
+      <p class="note">Cut everything from the same thickness and glue the frame to the base. Inside the window: the pieces come from the window's offcut and the fit comes from the kerf (clearance isn't used). In RDWorks, check the blue PIECES layer is at the top of the layer list so it cuts before the red window line frees the block. One block below: clearance is added round the window. Separate pieces are kerf-corrected to true size.</p>
       <div class="btns"><button class="btn red" id="dldxf">Download DXF</button><button class="btn alt" id="dlsvg">SVG</button><button class="btn alt" id="dlzip">ZIP (DXF + SVG)</button></div>
       <div class="btns"><button class="btn alt" id="cpdxf">Copy DXF text</button></div>
       <p class="msg" id="c-msg" role="status"></p>
