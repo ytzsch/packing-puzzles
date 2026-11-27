@@ -46,7 +46,13 @@ const persist=()=>{try{localStorage.setItem(SKEY,JSON.stringify(store))}catch(e)
 let cut=Object.assign({cell:20,border:12,clear:0.3,kerf:0.15,mode:'inside',chilli:true},store.cut||{});
 let draft=Object.assign({w:6,h:5,n:6,min:4,max:6,flip:true,distinct:true,noRect:true,diff:'medium',many:false,mask:null},store.draft||{});
 if(!draft.mask||draft.mask.length!==draft.w*draft.h)draft.mask=new Array(draft.w*draft.h).fill(1);
-let puz=MODE==='maker'?store.puzzle||null:null,mode='play',ps=[],sel=null,G=null,chal=null,cls=[],hints=0,t0=null,solved=false,worker=null,running=false;
+/* Solve timer: adds up only active time. It pauses while the page is out of sight, and any gap of more
+   than two minutes between touches counts as two minutes (phone put down, tea break). */
+const IDLE=120000;let elapsed=0,lastAct=null,started=false;
+function act(){const n=Date.now();if(lastAct!=null)elapsed+=Math.min(n-lastAct,IDLE);lastAct=n;started=true}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){if(lastAct!=null)elapsed+=Math.min(Date.now()-lastAct,IDLE);lastAct=null}
+  else if(started&&!solved)lastAct=Date.now()});
+let puz=MODE==='maker'?store.puzzle||null:null,mode='play',ps=[],sel=null,G=null,chal=null,cls=[],hints=0,solved=false,worker=null,running=false;
 const ID1=n=>[Int32Array.from({length:n},(_,i)=>i)];
 const P=id=>ps.find(p=>p.id===id);
 
@@ -62,7 +68,7 @@ function openGame(c){
   else G={w:c.w,h:c.h,mask:c.mask,ids:c.ids,fixed:[],sol:c.sol,shape:true};
   resetPlay();renderInfo();renderChallenges()}
 function resetPlay(){
-  hints=0;t0=null;solved=false;sel=null;$('banner').hidden=true;ps=[];
+  hints=0;elapsed=0;lastAct=null;started=false;solved=false;sel=null;$('banner').hidden=true;ps=[];
   for(const id of G.fixed){const c=G.sol[id];ps.push({id,shape:norm(c),x:Math.min(...c.map(v=>v[0])),y:Math.min(...c.map(v=>v[1])),inTray:true,fixed:true})}
   const free=G.ids.filter(id=>!G.fixed.includes(id)).sort(()=>Math.random()-.5).map(id=>{const os=orients(puz.pieces[id],puz.flip),sh=os[(Math.random()*os.length)|0];
     let bw=0,bh=0;for(const[a,b]of sh){bw=Math.max(bw,a+1);bh=Math.max(bh,b+1)}return {id,sh,bw,bh,sz:Math.max(bw,bh)}});
@@ -135,7 +141,7 @@ svg.addEventListener('pointerdown',e=>{
   const w=toWorld(e);
   if(sel!==p.id){sel=p.id;render()}
   const g2=svg.querySelector(`.pc[data-id="${p.id}"]`);g2.classList.add('drag');
-  drag={p,g:g2,dx:w.x-p.x,dy:w.y-p.y,sx:w.x,sy:w.y,lx:w.x,ly:w.y,ox:p.x,oy:p.y,t:Date.now(),moved:false};svg.setPointerCapture(e.pointerId);e.preventDefault()});
+  act();drag={p,g:g2,dx:w.x-p.x,dy:w.y-p.y,sx:w.x,sy:w.y,lx:w.x,ly:w.y,ox:p.x,oy:p.y,t:Date.now(),moved:false};svg.setPointerCapture(e.pointerId);e.preventDefault()});
 svg.addEventListener('pointermove',e=>{
   if(paint!==null){const el=document.elementFromPoint(e.clientX,e.clientY);const c=el?.dataset?.cell;if(c!=null&&draft.mask[+c]!==paint){draft.mask[+c]=paint;saveDraft();render()}return}
   if(!drag)return;const w=toWorld(e);
@@ -147,7 +153,7 @@ const endDrag=()=>{
   if(!moved&&dt<400){p.x=Math.round(p.x);p.y=Math.round(p.y);turn(p,'rot');return}
   // A quick flick turns the piece where it was: left/right flips, down rotates clockwise, up anticlockwise.
   if(dt<260&&Math.hypot(fx,fy)>.35){p.x=ox;p.y=oy;if(Math.abs(fx)>Math.abs(fy))turn(p,'flip');else turn(p,fy>0?'rot':'rotl');return}
-  if(!t0)t0=Date.now();drop(p);render();check()};
+  act();drop(p);render();check()};
 svg.addEventListener('pointerup',endDrag);svg.addEventListener('pointercancel',endDrag);
 function absCells(p){return p.shape.map(([a,b])=>[a+p.x,b+p.y])}
 function onTray(x,y){return x>=0&&y>=0&&x<G.w&&y<G.h&&G.mask[y*G.w+x]}
@@ -173,11 +179,11 @@ function turn(p,how){
   const ns=norm(p.shape.map(([a,b])=>how==='rot'?[-b,a]:how==='rotl'?[b,-a]:[-a,b]));
   let nx=0,ny=0;for(const[a,b]of ns){nx+=a;ny+=b}nx/=n;ny/=n;
   p.shape=ns;p.x=Math.round(p.x+cx-nx);p.y=Math.round(p.y+cy-ny);
-  if(!t0)t0=Date.now();drop(p);render();check()}
+  act();drop(p);render();check()}
 function check(){
   const need=G.mask.filter(Boolean).length;let cov=0;for(const p of ps)if(p.inTray)cov+=p.shape.length;
   if(cov===need&&ps.every(p=>p.inTray)){solved=true;sel=null;render();
-    const secs=t0?Math.round((Date.now()-t0)/1000):0;const m=Math.floor(secs/60),s=secs%60;
+    if(started)act();lastAct=null;const secs=Math.round(elapsed/1000);const m=Math.floor(secs/60),s=secs%60;
     $('banner').textContent=`Solved in ${m}:${String(s).padStart(2,'0')}${hints?` with ${hints} hint${hints>1?'s':''}`:''}`;$('banner').hidden=false;
     if(chal){store.done=store.done||{};store.done[puz.created+':'+chal.num]=1;persist();renderChallenges()}
     if(MODE==='app'&&!chal){if(puz.packNum){store.done=store.done||{};store.done['pack-'+puz.packNum]=1;persist()}
@@ -190,7 +196,7 @@ function completeFrom(placed){
   if(!r.sols.length)return null;return {rest,P:toPieces(r.sols[0],cl,G.w)}}
 function placeAt(p,cells){p.shape=norm(cells);p.x=Math.min(...cells.map(c=>c[0]));p.y=Math.min(...cells.map(c=>c[1]));p.inTray=true;p.at=Date.now()}
 function hint(){
-  if(solved||!puz)return;hints++;if(!t0)t0=Date.now();
+  if(solved||!puz)return;hints++;act();
   const placed=ps.filter(p=>p.inTray),res=completeFrom(placed);
   if(res){const keys=Object.keys(res.P).map(Number);let k=keys.find(k=>res.rest[k].id===sel);if(k==null)k=keys[(Math.random()*keys.length)|0];
     const p=res.rest[k];placeAt(p,res.P[k]);sel=p.id;$('p-msg').textContent='One piece placed for you.';render();check();return}
