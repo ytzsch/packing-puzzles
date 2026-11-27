@@ -25,6 +25,11 @@ jobs:
           mkdir _site
           cp index.html app.css app.js core.js worker.js qrcode.js sw.js manifest.webmanifest _site/
           cp -r puzzles pack icons _site/
+      - name: Stamp the version
+        run: |
+          BUILT=$(date -u +'%-d %b %Y')
+          sed -i "s/__VERSION__/${{ github.run_number }}/g; s/__BUILT__/$BUILT/g" _site/app.js _site/sw.js
+          grep -o "VERSION='[^']*'" _site/app.js
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:

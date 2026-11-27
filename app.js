@@ -40,7 +40,14 @@ const PRESETS=[
   {name:'Five-square set 10×5',w:10,h:5,n:10,min:5,max:5,many:true}];
 const OPT_KEYS=['cell','border','clear','kerf','mode'];
 const SKEY=MODE==='maker'?'packpuz':'packpuz-play';
-if('serviceWorker' in navigator&&location.protocol==='https:'&&MODE!=='maker')navigator.serviceWorker.register('sw.js').catch(()=>{});
+/* Version: stamped on deploy (GitHub run number and date). */
+const VERSION='__VERSION__',BUILT='__BUILT__',verText=VERSION.startsWith('__')?'Development version':`Version ${VERSION} · ${BUILT}`;
+document.querySelectorAll('.ver').forEach(e=>e.textContent=verText);
+if('serviceWorker' in navigator&&location.protocol==='https:'&&MODE!=='maker'){
+  const hadController=!!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js').then(r=>r.update()).catch(()=>{});
+  // A new version has downloaded and taken over: offer a restart to use it.
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(hadController)document.querySelectorAll('.update').forEach(e=>e.hidden=false)})}
 let store={};try{store=JSON.parse(localStorage.getItem(SKEY)||'{}')}catch(e){}
 const persist=()=>{try{localStorage.setItem(SKEY,JSON.stringify(store))}catch(e){}};
 let cut=Object.assign({cell:20,border:12,clear:0.3,kerf:0.15,mode:'inside',chilli:true},store.cut||{});

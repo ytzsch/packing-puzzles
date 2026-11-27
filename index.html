@@ -31,10 +31,12 @@
     <p class="note">Then add it to your home screen. On iPhone: tap Share, then Add to Home Screen. On Android: tap the menu, then Install app or Add to Home screen.</p>
   </div>
   <p class="foot"><a href="?maker">Puzzle maker</a></p>
+  <p class="ver"></p>
 </section>
 
 <!-- APP: puzzle library -->
 <section id="apphome" class="apphome">
+  <button type="button" class="update" hidden onclick="location.reload()">Update ready: tap to restart</button>
   <div class="apphead">
     <div><h1>Packing Puzzles</h1><p class="lede" id="app-progress">Loading puzzles…</p></div>
     <button class="btn alt" id="app-install" hidden>Install</button>
@@ -47,6 +49,7 @@
   </section>
   <div id="app-levels"></div>
   <div id="app-sets"></div>
+  <p class="ver"></p>
 </section>
 
 
@@ -145,6 +148,7 @@
         <label class="btn alt" style="display:flex;align-items:center;justify-content:center;color:var(--ink)">Open puzzle<input type="file" id="openjson" accept=".json,application/json" hidden></label>
       </div>
       <p class="note">The last puzzle is kept in this browser too.</p>
+      <p class="note ver"></p>
     </section>
     <!-- CUT -->
     <section class="card" id="p-cut" hidden>

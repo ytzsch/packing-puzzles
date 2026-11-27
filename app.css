@@ -116,3 +116,6 @@ input[type=text]{font:inherit;font-size:16px;color:var(--ink);background:var(--b
 [data-mode=app] #p-chal{display:none}
 [data-mode=app][data-view=play] #p-chal.open{display:grid;position:fixed;left:8px;right:8px;bottom:calc(72px + env(safe-area-inset-bottom));max-height:70dvh;overflow:auto;z-index:20;box-shadow:0 12px 40px rgba(0,0,0,.35)}
 [data-mode=app] #back:not([hidden]){display:block}
+.ver{font-size:13px;color:var(--muted);margin:8px 0 0}
+.update{display:block;width:100%;min-height:48px;border:0;border-radius:10px;background:var(--laser);color:#fff;font:600 16px Barlow,sans-serif;cursor:pointer}
+.update[hidden]{display:none}
