@@ -477,7 +477,7 @@ function appHome(){
   loadSets().then(list=>{list=list.filter(s=>s.tray+s.shape>0);
     $('app-sets').innerHTML=list.length?`<section class="lvl"><h2>Challenge sets</h2><div class="sets">${list.map(s=>`<a class="set" href="#set-${encodeURIComponent(s.id)}">${miniSVG(s.w,s.h,s.mask,[],false)}<b>${esc(s.name)}</b>${s.level?chillies(s.level,16):''}<span>${s.pieces} pieces · ${s.tray+s.shape} challenges</span></a>`).join('')}</div></section>`:''})}
 function appPlay(title,lede){root.dataset.view='play';$('next').hidden=true;sheet(false);$('title').textContent=title;$('lede').innerHTML=lede||'';document.title=title+' · Packing Puzzles';window.scrollTo(0,0)}
-function appRoute(){
+function appRoute(){closeShare();
   const h=decodeURIComponent(location.hash.slice(1));
   if(!h)return appHome();
   let m;
@@ -491,7 +491,28 @@ function appRoute(){
   else if(h.startsWith('set-')){const id=h.slice(4);appPlay('Loading…','');puz=null;render();
     fetch('puzzles/'+encodeURIComponent(id)+'.json').then(r=>{if(!r.ok)throw 0;return r.json()}).then(p=>{p.id=p.id||id;p.challenges=p.challenges||[];p.created=p.created||id;$('lede').innerHTML=p.level?chillies(p.level,16):'';loadPuzzle(p);$('p-chal').hidden=false;$('title').textContent=p.name;tbChal()})
     .catch(()=>{$('title').textContent='Not available offline';$('lede').textContent='Open this set once while online to keep it on your phone.'})}
+  else if(h.startsWith('g')){const p=fromCode(h.slice(1));if(!p){location.hash='';return}appPlay('Shared puzzle',p.level?chillies(p.level,16):'');loadPuzzle(p);$('p-chal').hidden=true;tbChal()}
   else location.hash=''}
+/* Sharing: a QR code and link for the app, or for the puzzle on screen. A new puzzle made on a phone travels in
+   the link itself (#g<w>x<h>.<level>.<one character per square: - = not in the tray, 1-9a-z = which piece>). */
+function shareCode(p){const g=new Array(p.w*p.h).fill('-');
+  p.pieces.forEach((pc,k)=>pc.forEach(([x,y])=>g[y*p.w+x]=(k+1).toString(36)));return`${p.w}x${p.h}.${p.level||0}.${g.join('')}`}
+function fromCode(code){const m=code.match(/^(\d+)x(\d+)\.(\d)\.([0-9a-z-]+)$/);if(!m)return null;const w=+m[1],h=+m[2],g=m[4];if(g.length!==w*h||w>16||h>16)return null;
+  const pieces=[],mask=[];for(let i=0;i<g.length;i++){const c=g[i];mask.push(c==='-'?0:1);if(c==='-')continue;const k=parseInt(c,36)-1;(pieces[k]=pieces[k]||[]).push([i%w,Math.floor(i/w)])}
+  if(pieces.length<2||[...pieces].some(p=>!p))return null;
+  return{v:2,name:'Shared puzzle',w,h,mask,flip:true,many:false,count:1,pieces,level:+m[3]||undefined,challenges:[],created:'shared-'+code.slice(-12),fresh:+m[3]||3}}
+function shareURL(){if(!puz)return SITE+'?app';if(puz.packNum)return SITE+'?app#p'+puz.packNum;if(puz.id&&!puz.fresh)return setURL(puz.id);return SITE+'?app#g'+shareCode(puz)}
+function openShare(kind){const p=kind==='puzzle'?puz:null,url=p?shareURL():SITE+'?app';
+  $('shTitle').textContent=p?'Share this puzzle':'Share Packing Puzzles';
+  $('shText').textContent=p?`Scan to open ${p.name||'this puzzle'} on another phone.`:'Scan with a phone camera to open the app. It can then be added to the home screen.';
+  $('shQr').innerHTML=qrSVG(url);$('shLink').textContent=url;$('shNative').hidden=!navigator.share;$('shApp').hidden=!p;$('shCopy').textContent='Copy link';
+  $('shareBox').dataset.url=url;$('shareBox').dataset.name=p?p.name||'':'';$('shade').hidden=$('shareBox').hidden=false;$('shClose').focus()}
+function closeShare(){$('shade').hidden=$('shareBox').hidden=true}
+document.addEventListener('click',e=>{const s=e.target.closest('[data-share]');if(s)openShare(s.dataset.share)});
+$('shClose').onclick=closeShare;$('shade').onclick=closeShare;$('shApp').onclick=()=>openShare('app');
+addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('shareBox').hidden)closeShare()});
+$('shCopy').onclick=async()=>{try{await navigator.clipboard.writeText($('shareBox').dataset.url);$('shCopy').textContent='Copied'}catch(e){$('shCopy').textContent='Copy failed: press and hold the link'}};
+$('shNative').onclick=async()=>{const n=$('shareBox').dataset.name;try{await navigator.share({title:'Packing Puzzles',text:n?`Try this packing puzzle: ${n}`:'Wooden packing puzzles, graded by chillies',url:$('shareBox').dataset.url})}catch(e){}};
 function sheet(open){$('p-chal').classList.toggle('open',!!open);$('tb-chal')?.setAttribute('aria-expanded',String(!!open))}
 function tbChal(){const has=!!(puz&&puz.challenges&&puz.challenges.length);$('tb-chal').hidden=!has;$('back').hidden=!chal}
 function app(){

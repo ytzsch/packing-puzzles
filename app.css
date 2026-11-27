@@ -119,3 +119,15 @@ input[type=text]{font:inherit;font-size:16px;color:var(--ink);background:var(--b
 .ver{font-size:13px;color:var(--muted);margin:8px 0 0}
 .update{display:block;width:100%;min-height:48px;border:0;border-radius:10px;background:var(--laser);color:#fff;font:600 16px Barlow,sans-serif;cursor:pointer}
 .update[hidden]{display:none}
+
+/* sharing */
+.headbtns{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+[data-mode=app] .top button.sharebtn:not([hidden]){display:none}
+[data-mode=app][data-view=play] .top button.sharebtn:not([hidden]){display:block;flex:none;min-height:40px;padding:6px 12px}
+.shade{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:60}
+.sharebox{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(92vw,400px);max-height:92svh;overflow:auto;z-index:61;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.3)}
+.sharebox h2{margin:0}
+.sharebox .note{margin:0}
+.qrbox{width:min(64vw,240px);margin:0 auto;background:#fff;padding:10px;border-radius:12px}
+.qrbox svg{display:block;width:100%;height:auto}
+.shlink{font-size:14px;overflow-wrap:anywhere;color:var(--muted);margin:0}

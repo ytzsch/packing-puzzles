@@ -39,7 +39,7 @@
   <button type="button" class="update" hidden onclick="location.reload()">Update ready: tap to restart</button>
   <div class="apphead">
     <div><h1>Packing Puzzles</h1><p class="lede" id="app-progress">Loading puzzles…</p></div>
-    <button class="btn alt" id="app-install" hidden>Install</button>
+    <div class="headbtns"><button class="btn alt" id="app-install" hidden>Install</button><button class="btn alt" type="button" data-share="app">Share</button></div>
   </div>
   <p class="note installhint" id="app-hint" hidden>Add this to your home screen to use it like an app. On iPhone: tap Share, then Add to Home Screen. On Android: tap the menu, then Install app.</p>
   <section class="card">
@@ -59,6 +59,7 @@
     <p class="crumb app-only"><a href="#" id="app-back">‹ Puzzles</a></p>
     <h1 id="title">Packing Puzzle Maker</h1>
     <p class="lede" id="lede">Design a tray, generate wooden pieces that fit only one way, try it on screen, then export the laser files.</p>
+    <button type="button" class="btn alt app-only sharebtn" data-share="puzzle">Share</button>
   </div>
   <div class="tabs maker-only" role="tablist" aria-label="Mode">
     <button role="tab" id="tab-design" aria-selected="false">Design</button>
@@ -179,6 +180,20 @@
   <button type="button" id="tb-sol"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 12l3 3 5-6"/></svg><span>Answer</span></button>
   <button type="button" id="tb-chal" hidden aria-expanded="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>Challenges</span></button>
 </nav>
+<!-- SHARE: QR code and link for the app or the puzzle on screen -->
+<div class="shade" id="shade" hidden></div>
+<div class="card sharebox" id="shareBox" role="dialog" aria-modal="true" aria-labelledby="shTitle" hidden>
+  <h2 id="shTitle">Share</h2>
+  <p class="note" id="shText"></p>
+  <div class="qrbox" id="shQr"></div>
+  <p class="shlink" id="shLink"></p>
+  <div class="btns">
+    <button class="btn red" type="button" id="shNative" hidden>Send…</button>
+    <button class="btn alt" type="button" id="shCopy">Copy link</button>
+    <button class="btn alt" type="button" id="shApp" hidden>Share the app instead</button>
+    <button class="btn alt" type="button" id="shClose">Close</button>
+  </div>
+</div>
 <script src="qrcode.js"></script>
 <script src="core.js"></script>
 <script src="app.js"></script>

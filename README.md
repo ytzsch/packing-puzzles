@@ -7,6 +7,7 @@ Site: https://ytzsch.github.io/packing-puzzles/
 - **Home page** lists every puzzle in `puzzles/`.
 - **Player**: `?set=<id>` opens one puzzle with its challenges, hints and solutions. Add `&c=T5` to open a challenge. This is what the QR codes point to.
 - **App**: `?app` is the installable puzzle app (add to home screen): 200 puzzles graded by chillies in `pack/`, new puzzles made on the phone at a chosen level, and the challenge sets. Works offline (`sw.js`, `manifest.webmanifest`).
+- **Share**: in the app, a Share button (home page and while playing) shows a QR code and link for the app or the puzzle on screen. A new puzzle made on the phone travels in the link itself (`?app#g<w>x<h>.<level>.<squares>`).
 - **Maker**: `?maker` designs trays, generates pieces (one solution, or many for a challenge set), makes graded challenges, prints the booklet and exports DXF/SVG for the laser.
 
 ## Adding a puzzle
